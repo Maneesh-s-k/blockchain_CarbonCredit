@@ -1,28 +1,91 @@
-import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import DashboardPage from "./components/Dashboard/DashboardPage.jsx";
-import RegisterDevice from "./components/Pages/RegisterDevice.jsx";
-import EnergyExchange from "./components/Pages/EnergyExchange.jsx";
-import Payments from "./components/Pages/Payments.jsx";
-import History from "./components/Pages/History.jsx";
-import Settings from "./components/Pages/Settings.jsx";
-import LoadingScreen from "./components/Shared/LoadingScreen.jsx";
-import "./styles/main.css";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 
-export default function App() {
-  const [isLoading, setIsLoading] = useState(false);
+// Components
+import ProtectedRoute from './components/Auth/ProtectedRoute';
+import MainContent from './components/Dashboard/MainContent';
 
+// Auth pages - using aliases to avoid conflicts
+import AuthLogin from './components/Pages/Auth/Login';
+import AuthRegister from './components/Pages/Auth/Register';
+
+// Other pages
+import EnergyExchange from './components/Pages/EnergyExchange';
+import History from './components/Pages/History';
+import Payments from './components/Pages/Payments';
+import RegisterDevice from './components/Pages/RegisterDevice';
+import Settings from './components/Pages/Settings';
+
+// Styles
+import './styles/App.css';
+import './styles/auth.css';
+
+function App() {
   return (
-    <Router>
-      {isLoading && <LoadingScreen />}
-      <Routes>
-        <Route path="/" element={<DashboardPage setIsLoading={setIsLoading} />} />
-        <Route path="/register-device" element={<RegisterDevice setIsLoading={setIsLoading} />} />
-        <Route path="/energy-exchange" element={<EnergyExchange />} />
-        <Route path="/payments" element={<Payments />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public auth routes */}
+          <Route path="/login" element={<AuthLogin />} />
+          <Route path="/register" element={<AuthRegister />} />
+
+          {/* Protected routes */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <MainContent />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/energy-exchange" 
+            element={
+              <ProtectedRoute>
+                <EnergyExchange />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/history" 
+            element={
+              <ProtectedRoute>
+                <History />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/payments" 
+            element={
+              <ProtectedRoute>
+                <Payments />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/register-device" 
+            element={
+              <ProtectedRoute>
+                <RegisterDevice />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Redirect unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
+
+export default App;
