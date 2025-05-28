@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  FiMail, 
+  FiLock, 
+  FiEye, 
+  FiEyeOff,
+  FiZap,
+  FiAlertTriangle
+} from 'react-icons/fi';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -56,7 +64,7 @@ export default function Login() {
           {/* Header */}
           <div className="auth-header">
             <div className="auth-logo">
-              <span className="auth-logo-icon">⚡</span>
+              <span className="auth-logo-icon"><FiZap /></span>
               <h1 className="auth-logo-text">Energy Trading</h1>
             </div>
             <h2 className="auth-title">Welcome Back</h2>
@@ -67,7 +75,7 @@ export default function Login() {
           <form className="auth-form" onSubmit={handleSubmit}>
             {error && (
               <div className="error-message">
-                <span className="error-icon">⚠️</span>
+                <span className="error-icon"><FiAlertTriangle /></span>
                 <span>{error}</span>
               </div>
             )}
@@ -77,7 +85,7 @@ export default function Login() {
                 Email Address
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">📧</span>
+                <span className="input-icon"><FiMail /></span>
                 <input
                   id="email"
                   name="email"
@@ -97,7 +105,7 @@ export default function Login() {
                 Password
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
+                <span className="input-icon"><FiLock /></span>
                 <input
                   id="password"
                   name="password"
@@ -114,7 +122,7 @@ export default function Login() {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
             </div>

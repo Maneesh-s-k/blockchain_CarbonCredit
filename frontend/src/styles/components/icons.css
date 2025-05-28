@@ -1,71 +1,10 @@
-/* Main CSS - Import all modules */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-/* Base styles */
-@import './base/variables.css';
-@import './base/typography.css';
-@import './base/animations.css';
-
-/* Effects */
-@import './effects/glassmorphism.css';
-@import './effects/circuit-overlay.css';
-@import './effects/dynamic-circuits.css';
-
-/* Components */
-@import './components/sidebar.css';
-@import './components/topbar.css';
-@import './components/dashboard.css';
-@import './components/auth.css';
-@import './components/modals.css';
-@import './components/buttons.css';
-@import './components/wallet.css';
-
-/* Responsive */
-@import './responsive/breakpoints.css';
-
-/* Global reset and body styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(to top, 
-    #000000 0%,
-    #000000 30%,
-    #0a2e1f 30%,
-    #0f3d26 40%,
-    #134e2d 50%,
-    #166534 60%,
-    #1a7a3a 70%,
-    #1e8b42 80%,
-    #229c49 90%,
-    #26ad50 100%
-  );
-  background-attachment: fixed;
-  color: #ffffff;
-  min-height: 100vh;
-  overflow-x: hidden;
-  line-height: 1.6;
-}
-
-.dashboard-container {
-  display: flex;
-  min-height: 100vh;
-  background: transparent;
-}
-
 /* Professional Icon Styling */
 .nav-icon,
 .btn-icon,
 .logo-icon,
 .stat-icon,
 .input-icon,
-.auth-logo-icon,
-.error-icon,
-.close-icon {
+.auth-logo-icon {
   color: rgba(255, 255, 255, 0.85) !important;
   text-shadow: 
     0 0 3px rgba(255, 255, 255, 0.6),
@@ -80,74 +19,10 @@ body {
   font-style: normal;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Clean Professional Icon Styling */
-.nav-icon,
-.btn-icon,
-.logo-icon {
-  color: rgba(255, 255, 255, 0.9) !important;
-  stroke-width: 1.5;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.nav-icon svg,
-.btn-icon svg,
-.logo-icon svg {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.logo-icon svg {
-  width: 28px;
-  height: 28px;
-}
-
-/* Hover effects */
-.nav-item:hover .nav-icon,
-.top-option-btn:hover .btn-icon {
-  color: rgba(255, 255, 255, 1) !important;
-  transform: scale(1.05);
-}
-
-/* Active state */
-.nav-item.active .nav-icon {
-  color: #60a5fa !important;
-}
-
-/* Button specific colors */
-.sell-credits-btn .btn-icon {
-  color: rgba(34, 197, 94, 0.9) !important;
-}
-
-.buy-credits-btn .btn-icon {
-  color: rgba(59, 130, 246, 0.9) !important;
-}
-
-.register-device-btn .btn-icon {
-  color: rgba(168, 85, 247, 0.9) !important;
-}
-
-.logout-btn .btn-icon {
-  color: rgba(239, 68, 68, 0.9) !important;
-}
-
-/* Remove emoji styling */
-.nav-icon,
-.btn-icon,
-.logo-icon {
-  text-shadow: none;
-  filter: none;
-  font-size: inherit;
-}
-
 
 /* Enhanced hover effects */
 .nav-item:hover .nav-icon,
-.top-option-btn:hover .btn-icon,
-.auth-button:hover .auth-logo-icon {
+.top-option-btn:hover .btn-icon {
   color: rgba(255, 255, 255, 1) !important;
   text-shadow: 
     0 0 5px rgba(255, 255, 255, 0.8),
@@ -289,6 +164,18 @@ body {
   }
 }
 
+/* Frosted glass icon background */
+.icon-with-bg {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Loading spinner icon */
 .spinner-icon {
   color: rgba(255, 255, 255, 0.8) !important;
@@ -297,41 +184,6 @@ body {
     0 0 8px var(--circuit-primary);
   filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.7));
   animation: spin 1s linear infinite;
-}
-
-/* Password toggle icons */
-.password-toggle {
-  color: rgba(255, 255, 255, 0.7) !important;
-  text-shadow: 
-    0 0 2px rgba(255, 255, 255, 0.5),
-    0 0 4px rgba(255, 255, 255, 0.3);
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6));
-  transition: all 0.3s ease;
-}
-
-.password-toggle:hover {
-  color: rgba(255, 255, 255, 1) !important;
-  text-shadow: 
-    0 0 4px rgba(255, 255, 255, 0.8),
-    0 0 8px rgba(255, 255, 255, 0.6);
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
-}
-
-/* Close button icons */
-.close-btn {
-  color: rgba(255, 255, 255, 0.7) !important;
-  text-shadow: 
-    0 0 2px rgba(255, 255, 255, 0.5),
-    0 0 4px rgba(255, 255, 255, 0.3);
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6));
-}
-
-.close-btn:hover {
-  color: rgba(255, 255, 255, 1) !important;
-  text-shadow: 
-    0 0 4px rgba(255, 255, 255, 0.8),
-    0 0 8px rgba(255, 255, 255, 0.6);
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
 }
 
 /* Responsive icon adjustments */
@@ -357,9 +209,7 @@ body {
   .nav-icon,
   .btn-icon,
   .logo-icon,
-  .stat-icon,
-  .input-icon,
-  .auth-logo-icon {
+  .stat-icon {
     color: #ffffff !important;
     text-shadow: none;
     filter: none;
@@ -372,9 +222,7 @@ body {
   .nav-icon,
   .btn-icon,
   .logo-icon,
-  .stat-icon,
-  .input-icon,
-  .auth-logo-icon {
+  .stat-icon {
     transition: none;
     animation: none;
   }

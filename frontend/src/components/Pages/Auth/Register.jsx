@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  FiUser, 
+  FiMail, 
+  FiLock, 
+  FiPhone, 
+  FiCreditCard,
+  FiEye, 
+  FiEyeOff,
+  FiZap,
+  FiAlertTriangle
+} from 'react-icons/fi';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -52,36 +63,28 @@ export default function Register() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  console.log('Form submitted!'); // Add this
-  console.log('Form data:', formData); // Add this
-  
-  if (formData.password !== formData.confirmPassword) {
-    console.log('Passwords do not match'); // Add this
-    return;
-  }
-
-  if (!formData.agreeToTerms) {
-    console.log('Terms not agreed'); // Add this
-    return;
-  }
-
-  setIsLoading(true);
-  console.log('Starting registration...'); // Add this
-
-  try {
-    const { confirmPassword, agreeToTerms, ...registrationData } = formData;
-    console.log('Registration data:', registrationData); // Add this
+    e.preventDefault();
     
-    await register(registrationData);
-    navigate('/verify-email', { replace: true });
-  } catch (error) {
-    console.error('Registration failed:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    if (formData.password !== formData.confirmPassword) {
+      return;
+    }
 
+    if (!formData.agreeToTerms) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { confirmPassword, agreeToTerms, ...registrationData } = formData;
+      await register(registrationData);
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Registration failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getPasswordStrengthColor = () => {
     if (passwordStrength <= 2) return 'strength-weak';
@@ -102,7 +105,7 @@ export default function Register() {
           {/* Header */}
           <div className="auth-header">
             <div className="auth-logo">
-              <span className="auth-logo-icon">⚡</span>
+              <span className="auth-logo-icon"><FiZap /></span>
               <h1 className="auth-logo-text">Energy Trading</h1>
             </div>
             <h2 className="auth-title">Create Account</h2>
@@ -113,7 +116,7 @@ export default function Register() {
           <form className="auth-form" onSubmit={handleSubmit}>
             {error && (
               <div className="error-message">
-                <span className="error-icon">⚠️</span>
+                <span className="error-icon"><FiAlertTriangle /></span>
                 <span>{error}</span>
               </div>
             )}
@@ -124,7 +127,7 @@ export default function Register() {
                   Username *
                 </label>
                 <div className="input-wrapper">
-                  <span className="input-icon">👤</span>
+                  <span className="input-icon"><FiUser /></span>
                   <input
                     id="username"
                     name="username"
@@ -143,7 +146,7 @@ export default function Register() {
                   Email *
                 </label>
                 <div className="input-wrapper">
-                  <span className="input-icon">📧</span>
+                  <span className="input-icon"><FiMail /></span>
                   <input
                     id="email"
                     name="email"
@@ -163,7 +166,7 @@ export default function Register() {
                 Password *
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
+                <span className="input-icon"><FiLock /></span>
                 <input
                   id="password"
                   name="password"
@@ -179,7 +182,7 @@ export default function Register() {
                   className="password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
               
@@ -203,7 +206,7 @@ export default function Register() {
                 Confirm Password *
               </label>
               <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
+                <span className="input-icon"><FiLock /></span>
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -230,7 +233,7 @@ export default function Register() {
                   Phone (Optional)
                 </label>
                 <div className="input-wrapper">
-                  <span className="input-icon">📱</span>
+                  <span className="input-icon"><FiPhone /></span>
                   <input
                     id="phone"
                     name="phone"
@@ -248,7 +251,7 @@ export default function Register() {
                   Wallet (Optional)
                 </label>
                 <div className="input-wrapper">
-                  <span className="input-icon">💳</span>
+                  <span className="input-icon"><FiCreditCard /></span>
                   <input
                     id="walletAddress"
                     name="walletAddress"

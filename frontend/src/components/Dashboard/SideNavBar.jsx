@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  FiHome, 
+  FiZap, 
+  FiBarChart2,
+  FiCreditCard, 
+  FiTool, 
+  FiSettings,
+  FiUser,
+  FiLogOut
+} from 'react-icons/fi';
 
 export default function SideNavBar() {
   const [isHovered, setIsHovered] = useState(false);
@@ -9,23 +19,22 @@ export default function SideNavBar() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { icon: '🏠', label: 'Dashboard', path: '/' },
-    { icon: '⚡', label: 'Energy Exchange', path: '/energy-exchange' },
-    { icon: '📊', label: 'History', path: '/history' },
-    { icon: '💳', label: 'Payments', path: '/payments' },
-    { icon: '🔧', label: 'Register Device', path: '/register-device' },
-    { icon: '⚙️', label: 'Settings', path: '/settings' },
+    { icon: <FiHome />, label: 'Dashboard', path: '/' },
+    { icon: <FiZap />, label: 'Energy Exchange', path: '/energy-exchange' },
+    { icon: <FiBarChart2 />, label: 'History', path: '/history' },
+    { icon: <FiCreditCard />, label: 'Payments', path: '/payments' },
+    { icon: <FiTool />, label: 'Register Device', path: '/register-device' },
+    { icon: <FiSettings />, label: 'Settings', path: '/settings' },
   ];
 
   const handleNavClick = (path) => {
-    console.log('Navigating to:', path);
     navigate(path);
   };
 
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -39,7 +48,7 @@ export default function SideNavBar() {
     >
       {/* Logo section */}
       <div className="nav-logo">
-        <div className="logo-icon">⚡</div>
+        <div className="logo-icon"><FiZap /></div>
         <h1 className={`logo-text ${isHovered ? 'visible' : 'hidden'}`}>
           Energy Trading
         </h1>
@@ -64,16 +73,15 @@ export default function SideNavBar() {
         ))}
       </div>
 
-      {/* User section at bottom */}
+      {/* User section */}
       <div className="nav-user-section">
         <div className="nav-divider"></div>
         
-        {/* Profile */}
         <div 
           className="nav-item user-profile"
           onClick={() => navigate('/profile')}
         >
-          <div className="nav-icon">👤</div>
+          <div className="nav-icon"><FiUser /></div>
           <span className={`nav-label ${isHovered ? 'visible' : 'hidden'}`}>
             {user?.username || 'Profile'}
           </span>
@@ -82,12 +90,11 @@ export default function SideNavBar() {
           )}
         </div>
 
-        {/* Logout */}
         <div 
           className="nav-item logout-item"
           onClick={handleLogout}
         >
-          <div className="nav-icon">🚪</div>
+          <div className="nav-icon"><FiLogOut /></div>
           <span className={`nav-label ${isHovered ? 'visible' : 'hidden'}`}>
             Logout
           </span>

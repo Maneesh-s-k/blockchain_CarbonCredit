@@ -4,7 +4,8 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 class EmailService {
   constructor() {
-    this.fromEmail = 'noreply@energytrading.com'; // Replace with your verified sender
+    // Use a verified sender email - MUST be verified in SendGrid dashboard
+    this.fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@yourdomain.com';
     this.fromName = 'Energy Trading Platform';
   }
 
@@ -56,10 +57,13 @@ class EmailService {
       };
 
       await sgMail.send(msg);
-      console.log('Email verification sent successfully to:', email);
+      console.log('✅ Email verification sent successfully to:', email);
       return true;
     } catch (error) {
-      console.error('SendGrid email verification error:', error);
+      console.error('❌ SendGrid email verification error:', error);
+      if (error.response && error.response.body && error.response.body.errors) {
+        console.error('SendGrid error details:', error.response.body.errors);
+      }
       throw new Error('Failed to send verification email');
     }
   }
@@ -112,10 +116,13 @@ class EmailService {
       };
 
       await sgMail.send(msg);
-      console.log('Password reset email sent successfully to:', email);
+      console.log('✅ Password reset email sent successfully to:', email);
       return true;
     } catch (error) {
-      console.error('SendGrid password reset error:', error);
+      console.error('❌ SendGrid password reset error:', error);
+      if (error.response && error.response.body && error.response.body.errors) {
+        console.error('SendGrid error details:', error.response.body.errors);
+      }
       throw new Error('Failed to send password reset email');
     }
   }
@@ -164,10 +171,13 @@ class EmailService {
       };
 
       await sgMail.send(msg);
-      console.log('Welcome email sent successfully to:', email);
+      console.log('✅ Welcome email sent successfully to:', email);
       return true;
     } catch (error) {
-      console.error('SendGrid welcome email error:', error);
+      console.error('❌ SendGrid welcome email error:', error);
+      if (error.response && error.response.body && error.response.body.errors) {
+        console.error('SendGrid error details:', error.response.body.errors);
+      }
       throw new Error('Failed to send welcome email');
     }
   }
@@ -219,10 +229,13 @@ class EmailService {
       };
 
       await sgMail.send(msg);
-      console.log('Security alert email sent successfully to:', email);
+      console.log('✅ Security alert email sent successfully to:', email);
       return true;
     } catch (error) {
-      console.error('SendGrid security alert error:', error);
+      console.error('❌ SendGrid security alert error:', error);
+      if (error.response && error.response.body && error.response.body.errors) {
+        console.error('SendGrid error details:', error.response.body.errors);
+      }
       throw new Error('Failed to send security alert email');
     }
   }

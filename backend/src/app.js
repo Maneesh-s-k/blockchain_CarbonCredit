@@ -72,15 +72,43 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Database connection
+
+// Database connection - UPDATED for Mongoose 6.0+
 if (process.env.NODE_ENV !== 'test') {
   mongoose.connect(process.env.MONGODB_URL + 'energy-trading-dapp', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    // Remove deprecated options: useNewUrlParser, useUnifiedTopology, bufferMaxEntries
+    serverSelectionTimeoutMS: 10000, // 10 seconds
+    socketTimeoutMS: 45000, // 45 seconds
+    maxPoolSize: 10, // Maximum number of connections
+    minPoolSize: 5, // Minimum number of connections
+    maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+    waitQueueTimeoutMS: 5000, // How long to wait for a connection to become available
   })
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .then(() => {
+    console.log('✅ MongoDB connected successfully');
+    console.log('📊 Database:', mongoose.connection.name);
+    console.log('🔗 Host:', mongoose.connection.host);
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+    console.error('💡 Check your IP whitelist in MongoDB Atlas');
+    process.exit(1);
+  });
+
+  // Handle connection events
+  mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB error:', err.message);
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    console.log('⚠️ MongoDB disconnected');
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    console.log('✅ MongoDB reconnected');
+  });
 }
+
 
 // Add a simple test route for debugging - NEW
 app.get('/api/test', (req, res) => {

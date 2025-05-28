@@ -6,6 +6,7 @@ export default function ProtectedRoute({ children, requireEmailVerification = fa
   const { isAuthenticated, user, isLoading } = useAuth();
   const location = useLocation();
 
+  // Show loading spinner while checking authentication
   if (isLoading) {
     return (
       <div className="loading-screen">
@@ -17,10 +18,12 @@ export default function ProtectedRoute({ children, requireEmailVerification = fa
     );
   }
 
+  // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Check email verification if required
   if (requireEmailVerification && !user?.isEmailVerified) {
     return <Navigate to="/verify-email" replace />;
   }

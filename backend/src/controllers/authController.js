@@ -5,6 +5,9 @@ const { validationResult } = require('express-validator');
 const emailService = require('../utils/emailService');
 const smsService = require('../utils/smsService');
 
+// Check if emails should be sent (disabled in development)
+const shouldSendEmails = process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS !== 'true';
+
 // Generate JWT token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -78,12 +81,20 @@ exports.register = async (req, res) => {
     
     await user.save();
 
-    // Send verification email
-    try {
-      await emailService.sendEmailVerification(email, username, emailVerificationToken);
-    } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      // Continue with registration even if email fails
+    // Send verification email (with error handling)
+    if (shouldSendEmails) {
+      try {
+        await emailService.sendEmailVerification(email, username, emailVerificationToken);
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError.message);
+        // Continue with registration even if email fails
+      }
+    } else {
+      console.log('📧 [DEV] Email Verification would be sent:', {
+        to: email,
+        username,
+        verificationUrl: `http://localhost:3000/verify-email/${emailVerificationToken}`
+      });
     }
 
     // Generate tokens
@@ -185,8 +196,8 @@ exports.login = async (req, res) => {
     });
     const refreshToken = generateRefreshToken(user._id);
 
-    // Send security alert if enabled
-    if (user.preferences.notifications.email) {
+    // Send security alert if enabled (with error handling)
+    if (shouldSendEmails && user.preferences.notifications.email) {
       try {
         await emailService.sendSecurityAlert(
           user.email, 
@@ -195,8 +206,16 @@ exports.login = async (req, res) => {
           `Login from IP: ${clientIP} at ${new Date().toLocaleString()}`
         );
       } catch (error) {
-        console.error('Security alert email failed:', error);
+        console.error('Security alert email failed:', error.message);
+        // Continue with login even if email fails
       }
+    } else {
+      console.log('🔐 [DEV] Security Alert would be sent:', {
+        user: user.username,
+        type: 'New Login',
+        ip: clientIP,
+        time: new Date().toLocaleString()
+      });
     }
 
     res.status(200).json({
@@ -240,11 +259,18 @@ exports.verifyEmail = async (req, res) => {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    // Send welcome email
-    try {
-      await emailService.sendWelcomeEmail(user.email, user.username);
-    } catch (error) {
-      console.error('Welcome email failed:', error);
+    // Send welcome email (with error handling)
+    if (shouldSendEmails) {
+      try {
+        await emailService.sendWelcomeEmail(user.email, user.username);
+      } catch (error) {
+        console.error('Welcome email failed:', error.message);
+      }
+    } else {
+      console.log('🎉 [DEV] Welcome Email would be sent:', {
+        to: user.email,
+        username: user.username
+      });
     }
 
     res.status(200).json({
@@ -286,8 +312,24 @@ exports.resendEmailVerification = async (req, res) => {
     const emailVerificationToken = user.generateEmailVerificationToken();
     await user.save();
 
-    // Send verification email
-    await emailService.sendEmailVerification(user.email, user.username, emailVerificationToken);
+    // Send verification email (with error handling)
+    if (shouldSendEmails) {
+      try {
+        await emailService.sendEmailVerification(user.email, user.username, emailVerificationToken);
+      } catch (emailError) {
+        console.error('Resend email verification failed:', emailError.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to resend verification email'
+        });
+      }
+    } else {
+      console.log('📧 [DEV] Resend Email Verification would be sent:', {
+        to: user.email,
+        username: user.username,
+        verificationUrl: `http://localhost:3000/verify-email/${emailVerificationToken}`
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -330,8 +372,16 @@ exports.sendPhoneVerification = async (req, res) => {
     user.phone = phone;
     await user.save();
 
-    // Send SMS
-    await smsService.sendPhoneVerification(phone, verificationCode, user.username);
+    // Send SMS (with error handling)
+    try {
+      await smsService.sendPhoneVerification(phone, verificationCode, user.username);
+    } catch (smsError) {
+      console.error('SMS sending failed:', smsError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send verification code'
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -376,11 +426,11 @@ exports.verifyPhone = async (req, res) => {
     user.phoneVerificationExpires = undefined;
     await user.save();
 
-    // Send welcome SMS
+    // Send welcome SMS (with error handling)
     try {
       await smsService.sendWelcomeSMS(user.phone, user.username);
     } catch (error) {
-      console.error('Welcome SMS failed:', error);
+      console.error('Welcome SMS failed:', error.message);
     }
 
     res.status(200).json({
@@ -416,16 +466,28 @@ exports.forgotPassword = async (req, res) => {
     const resetToken = user.generatePasswordResetToken();
     await user.save();
 
-    // Send reset email
-    try {
-      await emailService.sendPasswordReset(user.email, user.username, resetToken);
-      
-      // Send SMS notification if phone is verified
-      if (user.phone && user.isPhoneVerified && user.preferences.notifications.sms) {
-        await smsService.sendPasswordResetNotification(user.phone, user.username);
+    // Send reset email (with error handling)
+    if (shouldSendEmails) {
+      try {
+        await emailService.sendPasswordReset(user.email, user.username, resetToken);
+        
+        // Send SMS notification if phone is verified
+        if (user.phone && user.isPhoneVerified && user.preferences.notifications.sms) {
+          try {
+            await smsService.sendPasswordResetNotification(user.phone, user.username);
+          } catch (smsError) {
+            console.error('Password reset SMS failed:', smsError.message);
+          }
+        }
+      } catch (error) {
+        console.error('Password reset email failed:', error.message);
       }
-    } catch (error) {
-      console.error('Password reset notification failed:', error);
+    } else {
+      console.log('🔒 [DEV] Password Reset would be sent:', {
+        to: user.email,
+        username: user.username,
+        resetUrl: `http://localhost:3000/reset-password/${resetToken}`
+      });
     }
 
     res.status(200).json({
@@ -479,16 +541,24 @@ exports.resetPassword = async (req, res) => {
     
     await user.save();
 
-    // Send security alert
-    try {
-      await emailService.sendSecurityAlert(
-        user.email, 
-        user.username, 
-        'Password Reset', 
-        'Your password has been successfully reset'
-      );
-    } catch (error) {
-      console.error('Security alert failed:', error);
+    // Send security alert (with error handling)
+    if (shouldSendEmails) {
+      try {
+        await emailService.sendSecurityAlert(
+          user.email, 
+          user.username, 
+          'Password Reset', 
+          'Your password has been successfully reset'
+        );
+      } catch (error) {
+        console.error('Security alert failed:', error.message);
+      }
+    } else {
+      console.log('🔐 [DEV] Security Alert would be sent:', {
+        user: user.username,
+        type: 'Password Reset',
+        message: 'Password successfully reset'
+      });
     }
 
     res.status(200).json({
@@ -540,16 +610,24 @@ exports.changePassword = async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    // Send security alert
-    try {
-      await emailService.sendSecurityAlert(
-        user.email, 
-        user.username, 
-        'Password Changed', 
-        'Your password has been successfully changed'
-      );
-    } catch (error) {
-      console.error('Security alert failed:', error);
+    // Send security alert (with error handling)
+    if (shouldSendEmails) {
+      try {
+        await emailService.sendSecurityAlert(
+          user.email, 
+          user.username, 
+          'Password Changed', 
+          'Your password has been successfully changed'
+        );
+      } catch (error) {
+        console.error('Security alert failed:', error.message);
+      }
+    } else {
+      console.log('🔐 [DEV] Security Alert would be sent:', {
+        user: user.username,
+        type: 'Password Changed',
+        message: 'Password successfully changed'
+      });
     }
 
     res.status(200).json({

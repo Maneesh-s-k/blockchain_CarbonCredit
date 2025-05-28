@@ -9,24 +9,27 @@ const validateRegistration = [
   body('username')
     .trim()
     .isLength({ min: 3, max: 30 })
-    .withMessage('Username must be 3-30 characters'),
+    .withMessage('Username must be 3-30 characters')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please enter a valid email'),
   body('password')
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .withMessage('Password must be at least 6 characters')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   body('phone')
-    .optional({ checkFalsy: true }) // Make phone optional
+    .optional()
     .isMobilePhone()
     .withMessage('Please enter a valid phone number'),
   body('walletAddress')
-    .optional({ checkFalsy: true }) // Make wallet optional
+    .optional()
     .matches(/^0x[a-fA-F0-9]{40}$/)
     .withMessage('Invalid Ethereum address')
 ];
-
 
 const validateLogin = [
   body('email')
@@ -94,4 +97,36 @@ router.post('/verify-phone', authenticate, validatePhoneCode, authController.ver
 router.get('/login-history', authenticate, authController.getLoginHistory);
 router.post('/logout', authController.logout);
 
+// Add this route to your existing auth routes
+router.put('/update-wallet', authenticate, [
+  body('walletAddress')
+    .matches(/^0x[a-fA-F0-9]{40}$/)
+    .withMessage('Invalid Ethereum address')
+], async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    const userId = req.user.userId;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { walletAddress },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Wallet address updated successfully',
+      user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update wallet address'
+    });
+  }
+});
+
+
 module.exports = router;
+
+
