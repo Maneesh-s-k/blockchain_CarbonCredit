@@ -19,7 +19,9 @@ import Settings from './components/Pages/Settings';
 
 // Styles
 import './styles/App.css';
-import './styles/auth.css';
+
+import './styles/main.css';
+
 
 function App() {
   return (

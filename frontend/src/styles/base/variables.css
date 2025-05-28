@@ -1,0 +1,66 @@
+/* CSS Variables */
+:root {
+  /* Colors */
+  --bg-primary: transparent;
+  --bg-secondary: transparent;
+  --bg-tertiary: transparent;
+  
+  /* Glassmorphism backgrounds */
+  --bg-card-bottom: rgba(255, 255, 255, 0.1);
+  --bg-glass-bottom: rgba(255, 255, 255, 0.08);
+  --bg-glass-hover-bottom: rgba(255, 255, 255, 0.15);
+  --bg-card-top: rgba(0, 0, 0, 0.6);
+  --bg-glass-top: rgba(0, 0, 0, 0.5);
+  --bg-glass-hover-top: rgba(0, 0, 0, 0.7);
+  --bg-input: rgba(0, 0, 0, 0.4);
+  --bg-hover: rgba(0, 0, 0, 0.6);
+  
+  /* Text colors */
+  --text-primary: #ffffff;
+  --text-secondary: #e2e8f0;
+  --text-muted: #cbd5e0;
+  
+  /* Brand colors */
+  --primary-blue: #60a5fa;
+  --primary-blue-light: #93c5fd;
+  --primary-blue-dark: #3b82f6;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  
+  /* Circuit colors */
+  --circuit-primary: #00ffff;
+  --circuit-secondary: #00ff88;
+  --circuit-tertiary: #88ffff;
+  
+  /* Borders */
+  --border-glass: rgba(255, 255, 255, 0.2);
+  --border-primary: rgba(255, 255, 255, 0.15);
+  --border-secondary: rgba(255, 255, 255, 0.25);
+  
+  /* Shadows */
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  
+  /* Transitions */
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.2s ease;
+  --transition-slow: all 0.5s ease;
+  
+  /* Sidebar */
+  --sidebar-width-collapsed: 70px;
+  --sidebar-width-expanded: 280px;
+  
+  /* Circuit animation speeds */
+  --circuit-flow-speed: 8s;
+  --circuit-pulse-speed: 3s;
+  --circuit-glow-speed: 2s;
+}

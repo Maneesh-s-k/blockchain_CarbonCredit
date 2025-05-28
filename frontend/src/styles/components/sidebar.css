@@ -1,0 +1,506 @@
+/* Sidebar Component Styles with Dynamic Circuits */
+.side-navbar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-width-collapsed);
+  background: var(--bg-glass-top);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border-glass);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-shadow: var(--shadow-glass);
+}
+
+/* Hover to expand */
+.side-navbar:hover {
+  width: var(--sidebar-width-expanded);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Dynamic circuit overlay for sidebar */
+.side-navbar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.1;
+  background-image: 
+    /* Vertical flowing circuit lines */
+    linear-gradient(0deg, transparent 0%, transparent 24%, var(--circuit-primary) 24.5%, var(--circuit-primary) 25.5%, transparent 26%, transparent 100%),
+    linear-gradient(0deg, transparent 0%, transparent 49%, var(--circuit-secondary) 49.5%, var(--circuit-secondary) 50.5%, transparent 51%, transparent 100%),
+    linear-gradient(0deg, transparent 0%, transparent 74%, var(--circuit-tertiary) 74.5%, var(--circuit-tertiary) 75.5%, transparent 76%, transparent 100%),
+    
+    /* Horizontal connection lines */
+    linear-gradient(90deg, transparent 0%, transparent 79%, var(--circuit-primary) 80%, var(--circuit-primary) 81%, transparent 82%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 89%, var(--circuit-secondary) 90%, var(--circuit-secondary) 91%, transparent 92%, transparent 100%),
+    
+    /* Connection nodes with pulse effect */
+    radial-gradient(circle at 85% 20%, var(--circuit-primary) 1px, transparent 2px),
+    radial-gradient(circle at 85% 50%, var(--circuit-secondary) 1px, transparent 2px),
+    radial-gradient(circle at 85% 80%, var(--circuit-tertiary) 1px, transparent 2px),
+    
+    /* Fine circuit traces */
+    linear-gradient(0deg, transparent 0%, transparent 32%, var(--circuit-primary) 32.2%, var(--circuit-primary) 32.8%, transparent 33%, transparent 67%, var(--circuit-secondary) 67.2%, var(--circuit-secondary) 67.8%, transparent 68%, transparent 100%);
+    
+  background-size: 
+    100% 80px,   /* Vertical lines */
+    100% 120px, 
+    100% 100px,
+    100% 40px,   /* Horizontal lines */
+    100% 60px,
+    100% 40px,   /* Connection nodes */
+    100% 60px, 
+    100% 80px,
+    100% 50px;   /* Fine traces */
+    
+  background-position: 
+    0 0, 0 20px, 0 40px,     /* Vertical lines */
+    0 0, 0 20px,             /* Horizontal lines */
+    0 0, 0 20px, 0 40px,     /* Connection nodes */
+    0 0;                     /* Fine traces */
+    
+  animation: circuitFlowVertical calc(var(--circuit-flow-speed) * 1.5) linear infinite;
+}
+
+/* Enhanced circuit animation on hover */
+.side-navbar:hover::before {
+  opacity: 0.15;
+  animation-duration: calc(var(--circuit-flow-speed) * 0.8);
+}
+
+/* Logo section */
+.nav-logo {
+  position: relative;
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 80px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+/* Circuit effect for logo section */
+.nav-logo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.08;
+  background-image: 
+    linear-gradient(90deg, transparent 0%, transparent 48%, var(--circuit-primary) 49%, var(--circuit-primary) 51%, transparent 52%, transparent 100%),
+    radial-gradient(circle at 20% 50%, var(--circuit-primary) 1px, transparent 2px),
+    radial-gradient(circle at 80% 50%, var(--circuit-secondary) 1px, transparent 2px);
+  background-size: 100% 100%, 30px 30px, 30px 30px;
+  background-position: 0 0, 0 0, 15px 15px;
+  animation: circuitPulse var(--circuit-pulse-speed) ease-in-out infinite;
+}
+
+.logo-icon {
+  font-size: 28px;
+  color: #ffffff;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  opacity: 0;
+  width: 0;
+  transform: translateX(-20px);
+  position: relative;
+  z-index: 1;
+}
+
+/* Show logo text on hover */
+.side-navbar:hover .logo-text {
+  opacity: 1;
+  width: auto;
+  transform: translateX(0);
+}
+
+/* Navigation menu */
+.nav-menu {
+  flex: 1;
+  padding: 20px 0;
+  position: relative;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 2px 12px;
+  border-radius: var(--radius-sm);
+  position: relative;
+  min-height: 48px;
+  overflow: hidden;
+}
+
+.nav-item:hover {
+  background: var(--bg-glass-hover-top);
+  transform: translateX(4px);
+}
+
+/* Circuit glow effect on nav item hover */
+.nav-item:hover::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--circuit-primary) 20%,
+    var(--circuit-secondary) 50%,
+    var(--circuit-tertiary) 80%,
+    transparent 100%
+  );
+  animation: circuitGlow var(--circuit-glow-speed) ease-in-out infinite;
+  box-shadow: 0 0 10px var(--circuit-primary);
+}
+
+.nav-item.active {
+  background: rgba(96, 165, 250, 0.2);
+  border-left: 3px solid #60a5fa;
+}
+
+/* Enhanced active state with circuit animation */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--circuit-primary) 20%,
+    #60a5fa 50%,
+    var(--circuit-secondary) 80%,
+    transparent 100%
+  );
+  z-index: -1;
+  animation: circuitPulse var(--circuit-pulse-speed) ease-in-out infinite;
+  box-shadow: 0 0 15px var(--circuit-primary);
+}
+
+.nav-icon {
+  font-size: 18px;
+  color: #e2e8f0;
+  transition: all 0.3s ease;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.nav-item:hover .nav-icon {
+  color: #ffffff;
+  transform: scale(1.1);
+  text-shadow: 0 0 10px var(--circuit-primary);
+}
+
+.nav-item.active .nav-icon {
+  color: #60a5fa;
+  text-shadow: 0 0 10px #60a5fa;
+}
+
+.nav-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-left: 16px;
+  white-space: nowrap;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  opacity: 0;
+  width: 0;
+  transform: translateX(-20px);
+  position: relative;
+  z-index: 1;
+}
+
+/* Show nav labels on hover */
+.side-navbar:hover .nav-label {
+  opacity: 1;
+  width: auto;
+  transform: translateX(0);
+}
+
+/* Tooltips for collapsed state */
+.tooltip {
+  position: absolute;
+  left: 80px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 1001;
+  border: 1px solid var(--circuit-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+/* Circuit border animation for tooltips */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  background: linear-gradient(45deg, var(--circuit-primary), transparent, var(--circuit-secondary));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.5;
+  animation: circuitGlow calc(var(--circuit-glow-speed) * 2) ease-in-out infinite;
+}
+
+.nav-item:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(8px);
+}
+
+/* Hide tooltips when sidebar is expanded */
+.side-navbar:hover .tooltip {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* User section at bottom */
+.nav-user-section {
+  margin-top: auto;
+  padding-bottom: 20px;
+  position: relative;
+}
+
+/* Circuit divider with animation */
+.nav-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--circuit-primary), var(--circuit-secondary), var(--circuit-primary), transparent);
+  margin: 16px 12px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  position: relative;
+}
+
+.nav-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--circuit-primary), var(--circuit-secondary), var(--circuit-tertiary));
+  animation: circuitFlowHorizontal calc(var(--circuit-flow-speed) * 2) linear infinite;
+  opacity: 0.7;
+}
+
+/* Show divider on hover */
+.side-navbar:hover .nav-divider {
+  opacity: 1;
+}
+
+.user-profile {
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Circuit effect for user profile */
+.user-profile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(96, 165, 250, 0.1), transparent);
+  animation: circuitFlowHorizontal calc(var(--circuit-flow-speed) * 3) linear infinite;
+  pointer-events: none;
+}
+
+.logout-item {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.logout-item:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Circuit effect for logout item */
+.logout-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(239, 68, 68, 0.2), transparent);
+  animation: circuitFlowHorizontal calc(var(--circuit-flow-speed) * 4) linear infinite reverse;
+  pointer-events: none;
+}
+
+.logout-item .nav-icon {
+  color: #ef4444;
+}
+
+/* Sidebar expansion indicator */
+.sidebar-expand-indicator {
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--circuit-primary),
+    var(--circuit-secondary),
+    var(--circuit-primary),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: circuitPulse var(--circuit-pulse-speed) ease-in-out infinite;
+}
+
+.side-navbar:hover .sidebar-expand-indicator {
+  opacity: 0.8;
+}
+
+/* Data flow particles in sidebar */
+@keyframes sidebarDataFlow {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(100vh + 10px));
+    opacity: 0;
+  }
+}
+
+.side-navbar::after {
+  content: '';
+  position: absolute;
+  right: 5px;
+  top: -5px;
+  width: 3px;
+  height: 3px;
+  background: var(--circuit-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--circuit-primary);
+  animation: sidebarDataFlow 4s linear infinite;
+  pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tooltip {
+    left: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tooltip {
+    left: 60px;
+  }
+}
+
+/* Accessibility and reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .side-navbar::before,
+  .side-navbar::after,
+  .nav-logo::before,
+  .nav-item:hover::after,
+  .nav-item.active::before,
+  .nav-divider::before,
+  .user-profile::before,
+  .logout-item::before,
+  .sidebar-expand-indicator {
+    animation: none !important;
+  }
+}
+
+/* Focus states for accessibility */
+.nav-item:focus {
+  outline: 2px solid var(--circuit-primary);
+  outline-offset: 2px;
+}
+
+.nav-item:focus-visible {
+  background: var(--bg-glass-hover-top);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .side-navbar {
+    border-right: 2px solid #ffffff;
+  }
+  
+  .nav-item.active {
+    border-left: 4px solid #ffffff;
+  }
+  
+  .tooltip {
+    border: 2px solid #ffffff;
+  }
+}
