@@ -1,139 +1,332 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import SideNavBar from "../Dashboard/SideNavBar.jsx";
+import React, { useState } from 'react';
+import { 
+  FiUser, 
+  FiShield, 
+  FiBell, 
+  FiMoon,
+  FiGlobe,
+  FiSave,
+  FiEdit3,
+  FiLock,
+  FiMail,
+  FiSmartphone
+} from 'react-icons/fi';
 
 export default function Settings() {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("account");
+  const [activeSection, setActiveSection] = useState('profile');
   const [settings, setSettings] = useState({
-    email: "user@example.com",
-    phone: "+1 (555) 123-4567",
     notifications: {
       email: true,
-      sms: false,
-      push: true,
+      push: false,
+      trading: true,
+      marketing: false
     },
     privacy: {
       profileVisible: true,
-      dataSharing: false,
+      tradingHistoryVisible: false,
+      twoFactor: false
+    },
+    preferences: {
+      theme: 'dark',
+      language: 'en',
+      currency: 'USD',
+      timezone: 'UTC-8'
     }
   });
 
-  const handleNotificationChange = (type) => {
+  const handleSettingChange = (section, key, value) => {
     setSettings(prev => ({
       ...prev,
-      notifications: {
-        ...prev.notifications,
-        [type]: !prev.notifications[type]
+      [section]: {
+        ...prev[section],
+        [key]: value
       }
     }));
   };
 
+  const handleSave = () => {
+    console.log('Saving settings:', settings);
+    // Implement save logic
+  };
+
   return (
-    <div className="dashboard-container">
-      <SideNavBar />
-      
-      <div className="main-dashboard">
-        <div className="page-header">
-          <button className="back-btn" onClick={() => navigate("/")}>
-            ← Back to Dashboard
-          </button>
-          <h1>Settings</h1>
+    <div className="settings-page">
+      <div className="settings-container">
+        {/* Header */}
+        <div className="settings-header">
+          <div className="header-content">
+            <h1>Settings</h1>
+            <p>Manage your account preferences and security settings</p>
+          </div>
+          <div className="header-actions">
+            <button className="save-btn" onClick={handleSave}>
+              <FiSave />
+              Save Changes
+            </button>
+          </div>
         </div>
 
-        <div className="tabs">
-          <button 
-            className={`tab ${activeTab === "account" ? "active" : ""}`}
-            onClick={() => setActiveTab("account")}
-          >
-            Account
-          </button>
-          <button 
-            className={`tab ${activeTab === "notifications" ? "active" : ""}`}
-            onClick={() => setActiveTab("notifications")}
-          >
-            Notifications
-          </button>
-          <button 
-            className={`tab ${activeTab === "privacy" ? "active" : ""}`}
-            onClick={() => setActiveTab("privacy")}
-          >
-            Privacy
-          </button>
-        </div>
+        <div className="settings-layout">
+          {/* Settings Navigation */}
+          <div className="settings-nav">
+            <button 
+              className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`}
+              onClick={() => setActiveSection('profile')}
+            >
+              <FiUser />
+              Profile
+            </button>
+            <button 
+              className={`nav-item ${activeSection === 'security' ? 'active' : ''}`}
+              onClick={() => setActiveSection('security')}
+            >
+              <FiShield />
+              Security
+            </button>
+            <button 
+              className={`nav-item ${activeSection === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveSection('notifications')}
+            >
+              <FiBell />
+              Notifications
+            </button>
+            <button 
+              className={`nav-item ${activeSection === 'preferences' ? 'active' : ''}`}
+              onClick={() => setActiveSection('preferences')}
+            >
+              <FiMoon />
+              Preferences
+            </button>
+          </div>
 
-        <div className="page-content">
-          {activeTab === "account" && (
-            <div className="card">
-              <h3>Account Information</h3>
-              <div className="form-group">
-                <label>Email Address</label>
-                <input type="email" value={settings.email} readOnly />
-              </div>
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input type="tel" value={settings.phone} readOnly />
-              </div>
-              <div className="form-actions">
-                <button className="btn-confirm">Edit Profile</button>
-                <button className="btn-cancel">Change Password</button>
-              </div>
-            </div>
-          )}
+          {/* Settings Content */}
+          <div className="settings-content">
+            {activeSection === 'profile' && (
+              <div className="settings-section">
+                <h2>Profile Information</h2>
+                
+                <div className="profile-avatar">
+                  <div className="avatar-placeholder">
+                    <FiUser />
+                  </div>
+                  <button className="change-avatar-btn">
+                    <FiEdit3 />
+                    Change Avatar
+                  </button>
+                </div>
 
-          {activeTab === "notifications" && (
-            <div className="card">
-              <h3>Notification Preferences</h3>
-              <div className="setting-item">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications.email}
-                    onChange={() => handleNotificationChange('email')}
-                  />
-                  Email Notifications
-                </label>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>First Name</label>
+                    <input type="text" defaultValue="John" />
+                  </div>
+                  <div className="form-group">
+                    <label>Last Name</label>
+                    <input type="text" defaultValue="Doe" />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input type="email" defaultValue="john.doe@example.com" />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input type="tel" defaultValue="+1 (555) 123-4567" />
+                  </div>
+                  <div className="form-group full-width">
+                    <label>Bio</label>
+                    <textarea 
+                      rows="3" 
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="setting-item">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications.sms}
-                    onChange={() => handleNotificationChange('sms')}
-                  />
-                  SMS Notifications
-                </label>
-              </div>
-              <div className="setting-item">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={settings.notifications.push}
-                    onChange={() => handleNotificationChange('push')}
-                  />
-                  Push Notifications
-                </label>
-              </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === "privacy" && (
-            <div className="card">
-              <h3>Privacy Settings</h3>
-              <div className="setting-item">
-                <label>
-                  <input type="checkbox" checked={settings.privacy.profileVisible} readOnly />
-                  Make profile visible to other users
-                </label>
+            {activeSection === 'security' && (
+              <div className="settings-section">
+                <h2>Security Settings</h2>
+                
+                <div className="security-item">
+                  <div className="security-header">
+                    <FiLock />
+                    <div>
+                      <h3>Password</h3>
+                      <p>Change your account password</p>
+                    </div>
+                  </div>
+                  <button className="security-action">Change Password</button>
+                </div>
+
+                <div className="security-item">
+                  <div className="security-header">
+                    <FiSmartphone />
+                    <div>
+                      <h3>Two-Factor Authentication</h3>
+                      <p>Add an extra layer of security to your account</p>
+                    </div>
+                  </div>
+                  <label className="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      checked={settings.privacy.twoFactor}
+                      onChange={(e) => handleSettingChange('privacy', 'twoFactor', e.target.checked)}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
+
+                <div className="security-item">
+                  <div className="security-header">
+                    <FiMail />
+                    <div>
+                      <h3>Email Verification</h3>
+                      <p>Verify your email address for account security</p>
+                    </div>
+                  </div>
+                  <span className="verification-status verified">Verified</span>
+                </div>
               </div>
-              <div className="setting-item">
-                <label>
-                  <input type="checkbox" checked={settings.privacy.dataSharing} readOnly />
-                  Allow data sharing for analytics
-                </label>
+            )}
+
+            {activeSection === 'notifications' && (
+              <div className="settings-section">
+                <h2>Notification Preferences</h2>
+                
+                <div className="notification-group">
+                  <h3>Communication</h3>
+                  <div className="notification-item">
+                    <div className="notification-info">
+                      <h4>Email Notifications</h4>
+                      <p>Receive notifications via email</p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.email}
+                        onChange={(e) => handleSettingChange('notifications', 'email', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                  
+                  <div className="notification-item">
+                    <div className="notification-info">
+                      <h4>Push Notifications</h4>
+                      <p>Receive push notifications on your device</p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.push}
+                        onChange={(e) => handleSettingChange('notifications', 'push', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="notification-group">
+                  <h3>Trading</h3>
+                  <div className="notification-item">
+                    <div className="notification-info">
+                      <h4>Trading Alerts</h4>
+                      <p>Get notified about trading opportunities and completed trades</p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.trading}
+                        onChange={(e) => handleSettingChange('notifications', 'trading', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="notification-group">
+                  <h3>Marketing</h3>
+                  <div className="notification-item">
+                    <div className="notification-info">
+                      <h4>Marketing Emails</h4>
+                      <p>Receive updates about new features and promotions</p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.notifications.marketing}
+                        onChange={(e) => handleSettingChange('notifications', 'marketing', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {activeSection === 'preferences' && (
+              <div className="settings-section">
+                <h2>App Preferences</h2>
+                
+                <div className="preference-group">
+                  <h3>Appearance</h3>
+                  <div className="preference-item">
+                    <label>Theme</label>
+                    <select 
+                      value={settings.preferences.theme}
+                      onChange={(e) => handleSettingChange('preferences', 'theme', e.target.value)}
+                    >
+                      <option value="dark">Dark</option>
+                      <option value="light">Light</option>
+                      <option value="auto">Auto</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="preference-group">
+                  <h3>Localization</h3>
+                  <div className="preference-item">
+                    <label>Language</label>
+                    <select 
+                      value={settings.preferences.language}
+                      onChange={(e) => handleSettingChange('preferences', 'language', e.target.value)}
+                    >
+                      <option value="en">English</option>
+                      <option value="es">Spanish</option>
+                      <option value="fr">French</option>
+                      <option value="de">German</option>
+                    </select>
+                  </div>
+                  
+                  <div className="preference-item">
+                    <label>Currency</label>
+                    <select 
+                      value={settings.preferences.currency}
+                      onChange={(e) => handleSettingChange('preferences', 'currency', e.target.value)}
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="JPY">JPY (¥)</option>
+                    </select>
+                  </div>
+                  
+                  <div className="preference-item">
+                    <label>Timezone</label>
+                    <select 
+                      value={settings.preferences.timezone}
+                      onChange={(e) => handleSettingChange('preferences', 'timezone', e.target.value)}
+                    >
+                      <option value="UTC-8">Pacific Time (UTC-8)</option>
+                      <option value="UTC-5">Eastern Time (UTC-5)</option>
+                      <option value="UTC+0">GMT (UTC+0)</option>
+                      <option value="UTC+1">Central European Time (UTC+1)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

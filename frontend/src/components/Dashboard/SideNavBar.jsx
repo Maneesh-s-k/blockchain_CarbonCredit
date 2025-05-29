@@ -9,7 +9,8 @@ import {
   FiTool, 
   FiSettings,
   FiUser,
-  FiLogOut
+  FiLogOut,
+  FiGrid
 } from 'react-icons/fi';
 
 export default function SideNavBar() {
@@ -19,16 +20,21 @@ export default function SideNavBar() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { icon: <FiHome />, label: 'Dashboard', path: '/' },
+    { icon: <FiHome />, label: 'Dashboard', path: '/dashboard' },
     { icon: <FiZap />, label: 'Energy Exchange', path: '/energy-exchange' },
+    { icon: <FiGrid />, label: 'My Devices', path: '/devices' },
+    { icon: <FiTool />, label: 'Register Device', path: '/register-device' },
     { icon: <FiBarChart2 />, label: 'History', path: '/history' },
     { icon: <FiCreditCard />, label: 'Payments', path: '/payments' },
-    { icon: <FiTool />, label: 'Register Device', path: '/register-device' },
     { icon: <FiSettings />, label: 'Settings', path: '/settings' },
   ];
 
   const handleNavClick = (path) => {
     navigate(path);
+  };
+
+  const handleLogoClick = () => {
+    navigate('/dashboard');
   };
 
   const handleLogout = async () => {
@@ -42,12 +48,12 @@ export default function SideNavBar() {
 
   return (
     <nav 
-      className={`side-navbar ${isHovered ? 'expanded' : 'collapsed'}`}
+      className={`side-navbar ${isHovered ? 'expanded' : ''}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Logo section */}
-      <div className="nav-logo">
+      {/* Logo section - Clickable */}
+      <div className="nav-logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
         <div className="logo-icon"><FiZap /></div>
         <h1 className={`logo-text ${isHovered ? 'visible' : 'hidden'}`}>
           Energy Trading
@@ -61,6 +67,7 @@ export default function SideNavBar() {
             key={index}
             className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
             onClick={() => handleNavClick(item.path)}
+            style={{ cursor: 'pointer' }}
           >
             <div className="nav-icon">{item.icon}</div>
             <span className={`nav-label ${isHovered ? 'visible' : 'hidden'}`}>
@@ -80,6 +87,7 @@ export default function SideNavBar() {
         <div 
           className="nav-item user-profile"
           onClick={() => navigate('/profile')}
+          style={{ cursor: 'pointer' }}
         >
           <div className="nav-icon"><FiUser /></div>
           <span className={`nav-label ${isHovered ? 'visible' : 'hidden'}`}>
@@ -93,6 +101,7 @@ export default function SideNavBar() {
         <div 
           className="nav-item logout-item"
           onClick={handleLogout}
+          style={{ cursor: 'pointer' }}
         >
           <div className="nav-icon"><FiLogOut /></div>
           <span className={`nav-label ${isHovered ? 'visible' : 'hidden'}`}>

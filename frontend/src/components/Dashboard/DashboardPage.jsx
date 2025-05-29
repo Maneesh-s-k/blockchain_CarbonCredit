@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import WalletConnect from "../Wallet/WalletConnect";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import WalletConnect from '../Wallet/WalletConnect';
 import { 
   FiZap, 
   FiDollarSign, 
@@ -7,10 +8,62 @@ import {
   FiHome,
   FiTool,
   FiShoppingCart,
-  FiBarChart2
+  FiBarChart2,
+  FiGrid,
+  FiCreditCard
 } from 'react-icons/fi';
 
 export default function DashboardPage({ setIsLoading }) {
+  const navigate = useNavigate();
+
+  const handleQuickAction = (action) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      switch (action) {
+        case 'register':
+          navigate('/register-device');
+          break;
+        case 'sell':
+          navigate('/energy-exchange?tab=sell');
+          break;
+        case 'buy':
+          navigate('/energy-exchange?tab=buy');
+          break;
+        case 'devices':
+          navigate('/devices');
+          break;
+        case 'history':
+          navigate('/history');
+          break;
+        case 'payments':
+          navigate('/payments');
+          break;
+        default:
+          break;
+      }
+      setIsLoading(false);
+    }, 500);
+  };
+
+  const handleStatCardClick = (type) => {
+    switch (type) {
+      case 'energy':
+        navigate('/devices');
+        break;
+      case 'credits':
+        navigate('/energy-exchange');
+        break;
+      case 'trades':
+        navigate('/history');
+        break;
+      case 'devices':
+        navigate('/register-device');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="dashboard-content">
       {/* Hero Section */}
@@ -21,16 +74,17 @@ export default function DashboardPage({ setIsLoading }) {
         </p>
       </div>
 
-      {/* Main Dashboard Grid */}
+      {/* Dashboard Grid */}
       <div className="dashboard-grid">
-        {/* Left Column - Stats and Chart */}
         <div className="dashboard-left">
-          {/* Stats Grid */}
+          {/* Stats Grid - Make them clickable */}
           <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FiZap />
-              </div>
+            <div 
+              className="stat-card clickable" 
+              onClick={() => handleStatCardClick('energy')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="stat-icon"><FiZap /></div>
               <div className="stat-content">
                 <div className="stat-value">1,234 kWh</div>
                 <div className="stat-change positive">+12.5%</div>
@@ -38,10 +92,12 @@ export default function DashboardPage({ setIsLoading }) {
               </div>
             </div>
             
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FiDollarSign />
-              </div>
+            <div 
+              className="stat-card clickable" 
+              onClick={() => handleStatCardClick('credits')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="stat-icon"><FiDollarSign /></div>
               <div className="stat-content">
                 <div className="stat-value">$2,456</div>
                 <div className="stat-change positive">+8.2%</div>
@@ -49,10 +105,12 @@ export default function DashboardPage({ setIsLoading }) {
               </div>
             </div>
             
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FiRefreshCw />
-              </div>
+            <div 
+              className="stat-card clickable" 
+              onClick={() => handleStatCardClick('trades')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="stat-icon"><FiRefreshCw /></div>
               <div className="stat-content">
                 <div className="stat-value">23</div>
                 <div className="stat-change positive">+3</div>
@@ -60,22 +118,28 @@ export default function DashboardPage({ setIsLoading }) {
               </div>
             </div>
             
-            <div className="stat-card">
-              <div className="stat-icon">
-                <FiHome />
-              </div>
+            <div 
+              className="stat-card clickable" 
+              onClick={() => handleStatCardClick('devices')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="stat-icon"><FiHome /></div>
               <div className="stat-content">
                 <div className="stat-value">5</div>
                 <div className="stat-change">-</div>
-                <div className="stat-label">Registered Devices</div>
+                <div className="stat-label">Devices</div>
               </div>
             </div>
           </div>
 
-          {/* Chart Section */}
-          <div className="chart-section">
+          {/* Chart Section - Make clickable */}
+          <div 
+            className="chart-section clickable" 
+            onClick={() => navigate('/history')}
+            style={{ cursor: 'pointer' }}
+          >
             <div className="chart-header">
-              <h3 className="chart-title">Energy Production Overview</h3>
+              <h3>Energy Production Overview</h3>
               <div className="chart-timeframes">
                 <button className="timeframe-btn active">24H</button>
                 <button className="timeframe-btn">7D</button>
@@ -85,46 +149,75 @@ export default function DashboardPage({ setIsLoading }) {
             </div>
             <div className="chart-placeholder">
               <FiBarChart2 style={{ fontSize: '48px', color: 'var(--text-muted)' }} />
-              <p>Chart will be displayed here</p>
+              <p>Click to view detailed analytics</p>
             </div>
           </div>
         </div>
 
-        {/* Right Column - Wallet and Quick Actions */}
         <div className="dashboard-right">
-          {/* Wallet Connection */}
+          {/* Wallet */}
           <div className="wallet-section">
             <WalletConnect />
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions - Enhanced */}
           <div className="quick-actions-section">
             <h3>Quick Actions</h3>
             <div className="quick-actions-grid">
-              <button className="quick-action-btn">
-                <span className="action-icon"><FiZap /></span>
+              <button 
+                className="quick-action-btn"
+                onClick={() => handleQuickAction('register')}
+              >
+                <FiTool />
                 <span>Register Device</span>
               </button>
-              <button className="quick-action-btn">
-                <span className="action-icon"><FiDollarSign /></span>
+              <button 
+                className="quick-action-btn"
+                onClick={() => handleQuickAction('sell')}
+              >
+                <FiDollarSign />
                 <span>Sell Energy</span>
               </button>
-              <button className="quick-action-btn">
-                <span className="action-icon"><FiShoppingCart /></span>
+              <button 
+                className="quick-action-btn"
+                onClick={() => handleQuickAction('buy')}
+              >
+                <FiShoppingCart />
                 <span>Buy Credits</span>
               </button>
-              <button className="quick-action-btn">
-                <span className="action-icon"><FiBarChart2 /></span>
-                <span>View Reports</span>
+              <button 
+                className="quick-action-btn"
+                onClick={() => handleQuickAction('devices')}
+              >
+                <FiGrid />
+                <span>My Devices</span>
+              </button>
+              <button 
+                className="quick-action-btn"
+                onClick={() => handleQuickAction('history')}
+              >
+                <FiBarChart2 />
+                <span>View History</span>
+              </button>
+              <button 
+                className="quick-action-btn"
+                onClick={() => handleQuickAction('payments')}
+              >
+                <FiCreditCard />
+                <span>Payments</span>
               </button>
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Activity - Make clickable */}
           <div className="recent-activity-section">
             <h3>Recent Activity</h3>
             <div className="activity-list">
-              <div className="activity-item">
+              <div 
+                className="activity-item"
+                onClick={() => navigate('/history')}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="activity-icon">
                   <FiZap />
                 </div>
@@ -134,7 +227,11 @@ export default function DashboardPage({ setIsLoading }) {
                 </div>
                 <div className="activity-amount">+$45.20</div>
               </div>
-              <div className="activity-item">
+              <div 
+                className="activity-item"
+                onClick={() => navigate('/history')}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="activity-icon">
                   <FiRefreshCw />
                 </div>
@@ -144,7 +241,11 @@ export default function DashboardPage({ setIsLoading }) {
                 </div>
                 <div className="activity-amount">+$128.50</div>
               </div>
-              <div className="activity-item">
+              <div 
+                className="activity-item"
+                onClick={() => navigate('/devices')}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="activity-icon">
                   <FiHome />
                 </div>
