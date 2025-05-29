@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
+    trim: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
   password: {
@@ -25,123 +26,235 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
+  firstName: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'First name cannot exceed 50 characters']
+  },
+  lastName: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Last name cannot exceed 50 characters']
+  },
   phone: {
     type: String,
-    match: [/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number']
+    trim: true,
+    match: [/^\+?[\d\s\-\(\)]+$/, 'Please enter a valid phone number']
   },
-  walletAddress: {
+  avatar: {
     type: String,
-    unique: true,
-    sparse: true,
-    match: [/^0x[a-fA-F0-9]{40}$/, 'Please enter a valid Ethereum address']
+    default: null
   },
-  profile: {
-    firstName: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'First name cannot exceed 50 characters']
-    },
-    lastName: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'Last name cannot exceed 50 characters']
-    },
-    dateOfBirth: Date,
-    gender: {
-      type: String,
-      enum: ['male', 'female', 'other', 'prefer-not-to-say']
-    },
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      zipCode: String,
-      country: String
-    },
-    avatar: String,
-    bio: {
-      type: String,
-      maxlength: [500, 'Bio cannot exceed 500 characters']
+  bio: {
+    type: String,
+    maxlength: [500, 'Bio cannot exceed 500 characters']
+  },
+  location: {
+    address: String,
+    city: String,
+    state: String,
+    country: String,
+    zipCode: String,
+    coordinates: {
+      latitude: Number,
+      longitude: Number
     }
   },
-  energyBalance: {
-    type: Number,
-    default: 0,
-    min: [0, 'Energy balance cannot be negative']
+  wallet: {
+    balance: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    pendingBalance: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    totalSpent: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
   },
-  creditBalance: {
-    type: Number,
-    default: 0,
-    min: [0, 'Credit balance cannot be negative']
+  preferences: {
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true
+      },
+      push: {
+        type: Boolean,
+        default: false
+      },
+      trading: {
+        type: Boolean,
+        default: true
+      },
+      marketing: {
+        type: Boolean,
+        default: false
+      }
+    },
+    privacy: {
+      profileVisible: {
+        type: Boolean,
+        default: true
+      },
+      tradingHistoryVisible: {
+        type: Boolean,
+        default: false
+      }
+    },
+    trading: {
+      autoAcceptOffers: {
+        type: Boolean,
+        default: false
+      },
+      maxTradeAmount: {
+        type: Number,
+        default: 1000
+      },
+      preferredEnergyTypes: [{
+        type: String,
+        enum: ['solar', 'wind', 'hydro', 'geothermal', 'biomass']
+      }]
+    }
   },
-  isEmailVerified: {
-    type: Boolean,
-    default: false
+  verification: {
+    email: {
+      isVerified: {
+        type: Boolean,
+        default: false
+      },
+      verificationToken: String,
+      verificationExpires: Date
+    },
+    phone: {
+      isVerified: {
+        type: Boolean,
+        default: false
+      },
+      verificationCode: String,
+      verificationExpires: Date
+    },
+    identity: {
+      isVerified: {
+        type: Boolean,
+        default: false
+      },
+      documentType: String,
+      documentNumber: String,
+      verifiedAt: Date
+    }
   },
-  isPhoneVerified: {
-    type: Boolean,
-    default: false
+  security: {
+    twoFactorAuth: {
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      secret: String,
+      backupCodes: [String]
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0
+    },
+    lockUntil: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date
   },
-  emailVerificationToken: String,
-  emailVerificationExpires: Date,
-  phoneVerificationCode: String,
-  phoneVerificationExpires: Date,
-  passwordResetToken: String,
-  passwordResetExpires: Date,
-  role: {
-    type: String,
-    enum: ['user', 'admin', 'verifier'],
-    default: 'user'
+  statistics: {
+    totalDevices: {
+      type: Number,
+      default: 0
+    },
+    totalTrades: {
+      type: Number,
+      default: 0
+    },
+    totalEnergyProduced: {
+      type: Number,
+      default: 0
+    },
+    totalEnergyTraded: {
+      type: Number,
+      default: 0
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    totalRatings: {
+      type: Number,
+      default: 0
+    }
+  },
+  subscription: {
+    plan: {
+      type: String,
+      enum: ['free', 'basic', 'premium', 'enterprise'],
+      default: 'free'
+    },
+    startDate: Date,
+    endDate: Date,
+    autoRenew: {
+      type: Boolean,
+      default: false
+    }
   },
   isActive: {
     type: Boolean,
     default: true
   },
   lastLogin: Date,
-  loginAttempts: {
-    type: Number,
-    default: 0
-  },
-  lockUntil: Date,
-  twoFactorEnabled: {
-    type: Boolean,
-    default: false
-  },
-  twoFactorSecret: String,
-  preferences: {
-    notifications: {
-      email: { type: Boolean, default: true },
-      sms: { type: Boolean, default: false },
-      push: { type: Boolean, default: true }
-    },
-    language: { type: String, default: 'en' },
-    currency: { type: String, default: 'USD' },
-    theme: { type: String, enum: ['light', 'dark'], default: 'light' }
-  },
-  loginHistory: [{
-    ip: String,
-    userAgent: String,
-    location: String,
-    timestamp: { type: Date, default: Date.now }
-  }]
+  ipAddress: String,
+  userAgent: String
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Indexes for performance
+// Indexes
 userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
-userSchema.index({ phone: 1 });
-userSchema.index({ walletAddress: 1 });
-userSchema.index({ emailVerificationToken: 1 });
-userSchema.index({ passwordResetToken: 1 });
+userSchema.index({ 'location.coordinates': '2dsphere' });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ isActive: 1 });
 
-// Hash password before saving
+// Virtual for full name
+userSchema.virtual('fullName').get(function() {
+  if (this.firstName && this.lastName) {
+    return `${this.firstName} ${this.lastName}`;
+  }
+  return this.username;
+});
+
+// Virtual for total balance
+userSchema.virtual('totalBalance').get(function() {
+  return this.wallet.balance + this.wallet.pendingBalance;
+});
+
+// Virtual for account locked
+userSchema.virtual('isLocked').get(function() {
+  return !!(this.security.lockUntil && this.security.lockUntil > Date.now());
+});
+
+// Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
   try {
-    const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS) || 12);
+    const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
@@ -149,88 +262,94 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Compare password method
+// Method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Generate email verification token
-userSchema.methods.generateEmailVerificationToken = function() {
-  const token = crypto.randomBytes(32).toString('hex');
-  this.emailVerificationToken = token;
-  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-  return token;
+// Method to generate JWT token
+userSchema.methods.generateAuthToken = function() {
+  return jwt.sign(
+    { 
+      userId: this._id,
+      username: this.username,
+      email: this.email 
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { 
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+    }
+  );
 };
 
-// Generate password reset token
+// Method to generate password reset token
 userSchema.methods.generatePasswordResetToken = function() {
-  const token = crypto.randomBytes(32).toString('hex');
-  this.passwordResetToken = token;
-  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
-  return token;
+  const resetToken = require('crypto').randomBytes(32).toString('hex');
+  
+  this.security.passwordResetToken = require('crypto')
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+  
+  this.security.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  
+  return resetToken;
 };
 
-// Generate phone verification code
-userSchema.methods.generatePhoneVerificationCode = function() {
-  const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-  this.phoneVerificationCode = code;
-  this.phoneVerificationExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
-  return code;
-};
-
-// Check if account is locked
-userSchema.virtual('isLocked').get(function() {
-  return !!(this.lockUntil && this.lockUntil > Date.now());
-});
-
-// Increment login attempts
+// Method to increment login attempts
 userSchema.methods.incLoginAttempts = function() {
-  if (this.lockUntil && this.lockUntil < Date.now()) {
+  if (this.security.lockUntil && this.security.lockUntil < Date.now()) {
     return this.updateOne({
-      $unset: { lockUntil: 1, loginAttempts: 1 }
+      $unset: { 'security.lockUntil': 1, 'security.loginAttempts': 1 }
     });
   }
   
-  const updates = { $inc: { loginAttempts: 1 } };
+  const updates = { $inc: { 'security.loginAttempts': 1 } };
   
-  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = {
-      lockUntil: Date.now() + 2 * 60 * 60 * 1000 // 2 hours
-    };
+  if (this.security.loginAttempts + 1 >= 5 && !this.isLocked) {
+    updates.$set = { 'security.lockUntil': Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
   }
   
   return this.updateOne(updates);
 };
 
-// Add login history
-userSchema.methods.addLoginHistory = function(ip, userAgent, location) {
-  this.loginHistory.unshift({
-    ip,
-    userAgent,
-    location,
-    timestamp: new Date()
+// Method to reset login attempts
+userSchema.methods.resetLoginAttempts = function() {
+  return this.updateOne({
+    $unset: { 'security.loginAttempts': 1, 'security.lockUntil': 1 }
   });
-  
-  // Keep only last 10 login records
-  if (this.loginHistory.length > 10) {
-    this.loginHistory = this.loginHistory.slice(0, 10);
-  }
 };
 
-// Hide sensitive fields when converting to JSON
-userSchema.methods.toJSON = function() {
-  const userObject = this.toObject();
-  delete userObject.password;
-  delete userObject.emailVerificationToken;
-  delete userObject.emailVerificationExpires;
-  delete userObject.phoneVerificationCode;
-  delete userObject.phoneVerificationExpires;
-  delete userObject.passwordResetToken;
-  delete userObject.passwordResetExpires;
-  delete userObject.loginAttempts;
-  delete userObject.lockUntil;
-  delete userObject.twoFactorSecret;
-  return userObject;
+// Method to update wallet balance
+userSchema.methods.updateWalletBalance = function(amount, type = 'add') {
+  if (type === 'add') {
+    this.wallet.balance += amount;
+    this.wallet.totalEarnings += amount;
+  } else if (type === 'subtract') {
+    this.wallet.balance -= amount;
+    this.wallet.totalSpent += amount;
+  }
+  return this.save();
+};
+
+// Method to get public profile
+userSchema.methods.getPublicProfile = function() {
+  return {
+    id: this._id,
+    username: this.username,
+    fullName: this.fullName,
+    avatar: this.avatar,
+    bio: this.bio,
+    location: this.preferences.privacy.profileVisible ? this.location : null,
+    statistics: {
+      totalTrades: this.statistics.totalTrades,
+      averageRating: this.statistics.averageRating,
+      totalRatings: this.statistics.totalRatings,
+      totalEnergyProduced: this.statistics.totalEnergyProduced
+    },
+    joinedAt: this.createdAt,
+    lastActive: this.lastLogin
+  };
 };
 
 module.exports = mongoose.model('User', userSchema);

@@ -5,11 +5,11 @@ const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
 // Validation middleware
-const validateRegistration = [
+const validateRegister = [
   body('username')
     .trim()
     .isLength({ min: 3, max: 30 })
-    .withMessage('Username must be 3-30 characters')
+    .withMessage('Username must be between 3 and 30 characters')
     .matches(/^[a-zA-Z0-9_]+$/)
     .withMessage('Username can only contain letters, numbers, and underscores'),
   body('email')
@@ -21,14 +21,20 @@ const validateRegistration = [
     .withMessage('Password must be at least 6 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('First name cannot exceed 50 characters'),
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Last name cannot exceed 50 characters'),
   body('phone')
     .optional()
-    .isMobilePhone()
-    .withMessage('Please enter a valid phone number'),
-  body('walletAddress')
-    .optional()
-    .matches(/^0x[a-fA-F0-9]{40}$/)
-    .withMessage('Invalid Ethereum address')
+    .matches(/^\+?[\d\s\-\(\)]+$/)
+    .withMessage('Please enter a valid phone number')
 ];
 
 const validateLogin = [
@@ -41,15 +47,25 @@ const validateLogin = [
     .withMessage('Password is required')
 ];
 
-const validatePasswordReset = [
-  body('password')
+const validateForgotPassword = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please enter a valid email')
+];
+
+const validateResetPassword = [
+  body('token')
+    .notEmpty()
+    .withMessage('Reset token is required'),
+  body('newPassword')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number')
 ];
 
-const validatePasswordChange = [
+const validateChangePassword = [
   body('currentPassword')
     .notEmpty()
     .withMessage('Current password is required'),
@@ -60,73 +76,18 @@ const validatePasswordChange = [
     .withMessage('New password must contain at least one uppercase letter, one lowercase letter, and one number')
 ];
 
-const validatePhoneVerification = [
-  body('phone')
-    .isMobilePhone()
-    .withMessage('Please enter a valid phone number')
-];
-
-const validatePhoneCode = [
-  body('code')
-    .isLength({ min: 6, max: 6 })
-    .isNumeric()
-    .withMessage('Verification code must be 6 digits')
-];
-
-const validateEmail = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please enter a valid email')
-];
-
-// Public routes
-router.post('/register', validateRegistration, authController.register);
+// Auth routes
+router.post('/register', validateRegister, authController.register);
 router.post('/login', validateLogin, authController.login);
-router.get('/verify-email/:token', authController.verifyEmail);
-router.post('/resend-verification', validateEmail, authController.resendEmailVerification);
-router.post('/forgot-password', validateEmail, authController.forgotPassword);
-router.post('/reset-password/:token', validatePasswordReset, authController.resetPassword);
 router.post('/refresh-token', authController.refreshToken);
-
-// Protected routes
-router.get('/me', authenticate, authController.getCurrentUser);
-router.post('/change-password', authenticate, validatePasswordChange, authController.changePassword);
-router.post('/send-phone-verification', authenticate, validatePhoneVerification, authController.sendPhoneVerification);
-router.post('/verify-phone', authenticate, validatePhoneCode, authController.verifyPhone);
-router.get('/login-history', authenticate, authController.getLoginHistory);
 router.post('/logout', authController.logout);
 
-// Add this route to your existing auth routes
-router.put('/update-wallet', authenticate, [
-  body('walletAddress')
-    .matches(/^0x[a-fA-F0-9]{40}$/)
-    .withMessage('Invalid Ethereum address')
-], async (req, res) => {
-  try {
-    const { walletAddress } = req.body;
-    const userId = req.user.userId;
+// Password management
+router.post('/forgot-password', validateForgotPassword, authController.forgotPassword);
+router.post('/reset-password', validateResetPassword, authController.resetPassword);
+router.post('/change-password', authenticate, validateChangePassword, authController.changePassword);
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { walletAddress },
-      { new: true }
-    );
-
-    res.json({
-      success: true,
-      message: 'Wallet address updated successfully',
-      user
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update wallet address'
-    });
-  }
-});
-
+// Profile
+router.get('/profile', authenticate, authController.getProfile);
 
 module.exports = router;
-
-

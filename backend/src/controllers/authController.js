@@ -1,38 +1,34 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { validationResult } = require('express-validator');
-const emailService = require('../utils/emailService');
-const smsService = require('../utils/smsService');
 
-// Check if emails should be sent (disabled in development)
-const shouldSendEmails = process.env.NODE_ENV === 'production' && process.env.DISABLE_EMAILS !== 'true';
-
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
-  });
+// Helper function to generate tokens
+const generateTokens = (user) => {
+  const accessToken = jwt.sign(
+    { 
+      userId: user._id,
+      username: user.username,
+      email: user.email 
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
+  );
+  
+  const refreshToken = jwt.sign(
+    { userId: user._id },
+    process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+    { expiresIn: '7d' }
+  );
+  
+  return { accessToken, refreshToken };
 };
 
-// Generate refresh token
-const generateRefreshToken = (userId) => {
-  return jwt.sign({ userId, type: 'refresh' }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
-  });
-};
-
-// Get client IP address
-const getClientIP = (req) => {
-  return req.ip || 
-         req.connection.remoteAddress || 
-         req.socket.remoteAddress ||
-         (req.connection.socket ? req.connection.socket.remoteAddress : null);
-};
-
-// Register user
+// Register new user
 exports.register = async (req, res) => {
   try {
+    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -42,7 +38,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    const { username, email, password, phone, walletAddress } = req.body;
+    const { username, email, password, firstName, lastName, phone } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -52,67 +48,46 @@ exports.register = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email or username already exists'
+        message: existingUser.email === email 
+          ? 'Email already registered' 
+          : 'Username already taken'
       });
     }
 
-    // Check if phone number is already registered
-    if (phone) {
-      const existingPhone = await User.findOne({ phone });
-      if (existingPhone) {
-        return res.status(400).json({
-          success: false,
-          message: 'Phone number is already registered'
-        });
-      }
-    }
-
-    // Create user
+    // Create new user
     const user = new User({
       username,
       email,
       password,
+      firstName,
+      lastName,
       phone,
-      walletAddress
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
     });
 
-    // Generate email verification token
-    const emailVerificationToken = user.generateEmailVerificationToken();
-    
     await user.save();
-
-    // Send verification email (with error handling)
-    if (shouldSendEmails) {
-      try {
-        await emailService.sendEmailVerification(email, username, emailVerificationToken);
-      } catch (emailError) {
-        console.error('Email sending failed:', emailError.message);
-        // Continue with registration even if email fails
-      }
-    } else {
-      console.log('📧 [DEV] Email Verification would be sent:', {
-        to: email,
-        username,
-        verificationUrl: `http://localhost:3000/verify-email/${emailVerificationToken}`
-      });
-    }
 
     // Generate tokens
-    const token = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const { accessToken, refreshToken } = generateTokens(user);
 
-    // Add login history
-    const clientIP = getClientIP(req);
-    user.addLoginHistory(clientIP, req.get('User-Agent'), 'Registration');
+    // Update last login
+    user.lastLogin = new Date();
     await user.save();
+
+    // Remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.security;
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully. Please check your email for verification.',
-      token,
-      refreshToken,
-      user,
-      requiresEmailVerification: true
+      message: 'User registered successfully',
+      user: userResponse,
+      tokens: {
+        accessToken,
+        refreshToken
+      }
     });
 
   } catch (error) {
@@ -137,15 +112,15 @@ exports.login = async (req, res) => {
       });
     }
 
-    const { email, password, rememberMe } = req.body;
+    const { email, password } = req.body;
 
     // Find user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
-
+    
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid email or password'
       });
     }
 
@@ -153,78 +128,56 @@ exports.login = async (req, res) => {
     if (user.isLocked) {
       return res.status(423).json({
         success: false,
-        message: 'Account temporarily locked due to too many failed login attempts. Please try again later.'
+        message: 'Account temporarily locked due to too many failed login attempts'
       });
     }
 
     // Check if account is active
     if (!user.isActive) {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
-        message: 'Account has been deactivated. Please contact support.'
+        message: 'Account has been deactivated'
       });
     }
 
     // Compare password
     const isPasswordValid = await user.comparePassword(password);
-
+    
     if (!isPasswordValid) {
       await user.incLoginAttempts();
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid email or password'
       });
     }
 
     // Reset login attempts on successful login
-    if (user.loginAttempts > 0) {
-      await user.updateOne({
-        $unset: { loginAttempts: 1, lockUntil: 1 }
-      });
+    if (user.security.loginAttempts > 0) {
+      await user.resetLoginAttempts();
     }
-
-    // Update last login and add to history
-    const clientIP = getClientIP(req);
-    user.lastLogin = new Date();
-    user.addLoginHistory(clientIP, req.get('User-Agent'), 'Login');
-    await user.save();
 
     // Generate tokens
-    const tokenExpiry = rememberMe ? '30d' : '7d';
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: tokenExpiry
-    });
-    const refreshToken = generateRefreshToken(user._id);
+    const { accessToken, refreshToken } = generateTokens(user);
 
-    // Send security alert if enabled (with error handling)
-    if (shouldSendEmails && user.preferences.notifications.email) {
-      try {
-        await emailService.sendSecurityAlert(
-          user.email, 
-          user.username, 
-          'New Login', 
-          `Login from IP: ${clientIP} at ${new Date().toLocaleString()}`
-        );
-      } catch (error) {
-        console.error('Security alert email failed:', error.message);
-        // Continue with login even if email fails
-      }
-    } else {
-      console.log('🔐 [DEV] Security Alert would be sent:', {
-        user: user.username,
-        type: 'New Login',
-        ip: clientIP,
-        time: new Date().toLocaleString()
-      });
-    }
+    // Update login info
+    user.lastLogin = new Date();
+    user.ipAddress = req.ip;
+    user.userAgent = req.get('User-Agent');
+    await user.save();
 
-    res.status(200).json({
+    // Remove sensitive data from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.security;
+
+    res.json({
       success: true,
       message: 'Login successful',
-      token,
-      refreshToken,
-      user,
-      requiresEmailVerification: !user.isEmailVerified
+      user: userResponse,
+      tokens: {
+        accessToken,
+        refreshToken
+      }
     });
 
   } catch (error) {
@@ -237,213 +190,92 @@ exports.login = async (req, res) => {
   }
 };
 
-// Verify email
-exports.verifyEmail = async (req, res) => {
+// Refresh access token
+exports.refreshToken = async (req, res) => {
   try {
-    const { token } = req.params;
+    const { refreshToken } = req.body;
 
-    const user = await User.findOne({
-      emailVerificationToken: token,
-      emailVerificationExpires: { $gt: Date.now() }
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token is required'
+      });
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(
+      refreshToken, 
+      process.env.JWT_REFRESH_SECRET || 'your-refresh-secret'
+    );
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token'
+      });
+    }
+
+    // Generate new tokens
+    const tokens = generateTokens(user);
+
+    res.json({
+      success: true,
+      tokens
     });
 
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired verification token'
-      });
-    }
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid refresh token'
+    });
+  }
+};
 
-    user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
-    await user.save();
-
-    // Send welcome email (with error handling)
-    if (shouldSendEmails) {
-      try {
-        await emailService.sendWelcomeEmail(user.email, user.username);
-      } catch (error) {
-        console.error('Welcome email failed:', error.message);
-      }
-    } else {
-      console.log('🎉 [DEV] Welcome Email would be sent:', {
-        to: user.email,
-        username: user.username
-      });
-    }
-
-    res.status(200).json({
+// Logout user
+exports.logout = async (req, res) => {
+  try {
+    // In a production app, you might want to blacklist the token
+    // For now, we'll just send a success response
+    res.json({
       success: true,
-      message: 'Email verified successfully',
+      message: 'Logout successful'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during logout'
+    });
+  }
+};
+
+// Get current user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId)
+      .populate('statistics')
+      .select('-security.passwordResetToken -security.passwordResetExpires');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
       user
     });
 
   } catch (error) {
-    console.error('Email verification error:', error);
+    console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during email verification'
-    });
-  }
-};
-
-// Resend email verification
-exports.resendEmailVerification = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email is already verified'
-      });
-    }
-
-    // Generate new verification token
-    const emailVerificationToken = user.generateEmailVerificationToken();
-    await user.save();
-
-    // Send verification email (with error handling)
-    if (shouldSendEmails) {
-      try {
-        await emailService.sendEmailVerification(user.email, user.username, emailVerificationToken);
-      } catch (emailError) {
-        console.error('Resend email verification failed:', emailError.message);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to resend verification email'
-        });
-      }
-    } else {
-      console.log('📧 [DEV] Resend Email Verification would be sent:', {
-        to: user.email,
-        username: user.username,
-        verificationUrl: `http://localhost:3000/verify-email/${emailVerificationToken}`
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Verification email sent successfully'
-    });
-
-  } catch (error) {
-    console.error('Resend email verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to resend verification email'
-    });
-  }
-};
-
-// Send phone verification
-exports.sendPhoneVerification = async (req, res) => {
-  try {
-    const { phone } = req.body;
-    const userId = req.user.userId;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Check if phone is already verified
-    if (user.phone === phone && user.isPhoneVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number is already verified'
-      });
-    }
-
-    // Generate verification code
-    const verificationCode = user.generatePhoneVerificationCode();
-    user.phone = phone;
-    await user.save();
-
-    // Send SMS (with error handling)
-    try {
-      await smsService.sendPhoneVerification(phone, verificationCode, user.username);
-    } catch (smsError) {
-      console.error('SMS sending failed:', smsError.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send verification code'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Verification code sent to your phone'
-    });
-
-  } catch (error) {
-    console.error('Send phone verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send verification code'
-    });
-  }
-};
-
-// Verify phone
-exports.verifyPhone = async (req, res) => {
-  try {
-    const { code } = req.body;
-    const userId = req.user.userId;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Check if code is valid and not expired
-    if (!user.phoneVerificationCode || 
-        user.phoneVerificationCode !== code || 
-        user.phoneVerificationExpires < Date.now()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired verification code'
-      });
-    }
-
-    user.isPhoneVerified = true;
-    user.phoneVerificationCode = undefined;
-    user.phoneVerificationExpires = undefined;
-    await user.save();
-
-    // Send welcome SMS (with error handling)
-    try {
-      await smsService.sendWelcomeSMS(user.phone, user.username);
-    } catch (error) {
-      console.error('Welcome SMS failed:', error.message);
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Phone verified successfully',
-      user
-    });
-
-  } catch (error) {
-    console.error('Phone verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during phone verification'
+      message: 'Server error fetching profile'
     });
   }
 };
@@ -455,10 +287,9 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      // Don't reveal if email exists for security
-      return res.status(200).json({
-        success: true,
-        message: 'If an account with that email exists, a password reset link has been sent'
+      return res.status(404).json({
+        success: false,
+        message: 'No user found with that email address'
       });
     }
 
@@ -466,40 +297,26 @@ exports.forgotPassword = async (req, res) => {
     const resetToken = user.generatePasswordResetToken();
     await user.save();
 
-    // Send reset email (with error handling)
-    if (shouldSendEmails) {
-      try {
-        await emailService.sendPasswordReset(user.email, user.username, resetToken);
-        
-        // Send SMS notification if phone is verified
-        if (user.phone && user.isPhoneVerified && user.preferences.notifications.sms) {
-          try {
-            await smsService.sendPasswordResetNotification(user.phone, user.username);
-          } catch (smsError) {
-            console.error('Password reset SMS failed:', smsError.message);
-          }
-        }
-      } catch (error) {
-        console.error('Password reset email failed:', error.message);
-      }
-    } else {
-      console.log('🔒 [DEV] Password Reset would be sent:', {
-        to: user.email,
-        username: user.username,
-        resetUrl: `http://localhost:3000/reset-password/${resetToken}`
+    // In production, send email with reset link
+    // For development, return the token
+    if (process.env.NODE_ENV === 'development') {
+      return res.json({
+        success: true,
+        message: 'Password reset token generated',
+        resetToken // Remove this in production
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
-      message: 'If an account with that email exists, a password reset link has been sent'
+      message: 'Password reset email sent'
     });
 
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during password reset request'
+      message: 'Server error processing request'
     });
   }
 };
@@ -507,70 +324,46 @@ exports.forgotPassword = async (req, res) => {
 // Reset password
 exports.resetPassword = async (req, res) => {
   try {
-    const { token } = req.params;
-    const { password } = req.body;
+    const { token, newPassword } = req.body;
 
+    // Hash the token
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with valid reset token
     const user = await User.findOne({
-      passwordResetToken: token,
-      passwordResetExpires: { $gt: Date.now() }
-    }).select('+password');
+      'security.passwordResetToken': hashedToken,
+      'security.passwordResetExpires': { $gt: Date.now() }
+    });
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired reset token'
+        message: 'Password reset token is invalid or has expired'
       });
     }
 
-    // Check if new password is different from current
-    const isSamePassword = await user.comparePassword(password);
-    if (isSamePassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be different from current password'
-      });
-    }
+    // Update password
+    user.password = newPassword;
+    user.security.passwordResetToken = undefined;
+    user.security.passwordResetExpires = undefined;
+    user.security.loginAttempts = 0;
+    user.security.lockUntil = undefined;
 
-    user.password = password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    
-    // Reset login attempts if any
-    user.loginAttempts = 0;
-    user.lockUntil = undefined;
-    
     await user.save();
 
-    // Send security alert (with error handling)
-    if (shouldSendEmails) {
-      try {
-        await emailService.sendSecurityAlert(
-          user.email, 
-          user.username, 
-          'Password Reset', 
-          'Your password has been successfully reset'
-        );
-      } catch (error) {
-        console.error('Security alert failed:', error.message);
-      }
-    } else {
-      console.log('🔐 [DEV] Security Alert would be sent:', {
-        user: user.username,
-        type: 'Password Reset',
-        message: 'Password successfully reset'
-      });
-    }
-
-    res.status(200).json({
+    res.json({
       success: true,
-      message: 'Password reset successfully'
+      message: 'Password reset successful'
     });
 
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during password reset'
+      message: 'Server error resetting password'
     });
   }
 };
@@ -579,9 +372,8 @@ exports.resetPassword = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const userId = req.user.userId;
 
-    const user = await User.findById(userId).select('+password');
+    const user = await User.findById(req.user.userId).select('+password');
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -598,39 +390,11 @@ exports.changePassword = async (req, res) => {
       });
     }
 
-    // Check if new password is different
-    const isSamePassword = await user.comparePassword(newPassword);
-    if (isSamePassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'New password must be different from current password'
-      });
-    }
-
+    // Update password
     user.password = newPassword;
     await user.save();
 
-    // Send security alert (with error handling)
-    if (shouldSendEmails) {
-      try {
-        await emailService.sendSecurityAlert(
-          user.email, 
-          user.username, 
-          'Password Changed', 
-          'Your password has been successfully changed'
-        );
-      } catch (error) {
-        console.error('Security alert failed:', error.message);
-      }
-    } else {
-      console.log('🔐 [DEV] Security Alert would be sent:', {
-        user: user.username,
-        type: 'Password Changed',
-        message: 'Password successfully changed'
-      });
-    }
-
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Password changed successfully'
     });
@@ -639,116 +403,9 @@ exports.changePassword = async (req, res) => {
     console.error('Change password error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during password change'
+      message: 'Server error changing password'
     });
   }
 };
 
-// Get current user
-exports.getCurrentUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      user
-    });
-
-  } catch (error) {
-    console.error('Get current user error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-};
-
-// Refresh token
-exports.refreshToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Refresh token required'
-      });
-    }
-
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-    
-    if (decoded.type !== 'refresh') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid refresh token'
-      });
-    }
-
-    const user = await User.findById(decoded.userId);
-    if (!user || !user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid refresh token'
-      });
-    }
-
-    // Generate new tokens
-    const newToken = generateToken(user._id);
-    const newRefreshToken = generateRefreshToken(user._id);
-
-    res.status(200).json({
-      success: true,
-      token: newToken,
-      refreshToken: newRefreshToken
-    });
-
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    res.status(401).json({
-      success: false,
-      message: 'Invalid refresh token'
-    });
-  }
-};
-
-// Logout
-exports.logout = (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Logout successful'
-  });
-};
-
-// Get login history
-exports.getLoginHistory = async (req, res) => {
-  try {
-    const userId = req.user.userId;
-
-    const user = await User.findById(userId).select('loginHistory');
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      loginHistory: user.loginHistory
-    });
-
-  } catch (error) {
-    console.error('Get login history error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-};
+module.exports = exports;
