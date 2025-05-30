@@ -3,10 +3,62 @@ const API_BASE_URL = 'http://localhost:3001/api';
 class ApiClient {
   constructor() {
     this.baseURL = API_BASE_URL;
+    this.isRefreshing = false;
+    this.failedQueue = [];
   }
 
   getAuthToken() {
     return localStorage.getItem('token');
+  }
+
+  getRefreshToken() {
+    return localStorage.getItem('refreshToken');
+  }
+
+  setTokens(token, refreshToken) {
+    localStorage.setItem('token', token);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+  }
+
+  clearTokens() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  }
+
+  processQueue(error, token = null) {
+    this.failedQueue.forEach(({ resolve, reject }) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(token);
+      }
+    });
+    
+    this.failedQueue = [];
+  }
+
+  async refreshAccessToken() {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await fetch(`${this.baseURL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh token');
+    }
+
+    const data = await response.json();
+    return data.token;
   }
 
   async request(endpoint, options = {}) {
@@ -29,15 +81,82 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      
+      // Handle 401 Unauthorized (token expired)
+      if (response.status === 401) {
+        // If already refreshing, queue this request
+        if (this.isRefreshing) {
+          return new Promise((resolve, reject) => {
+            this.failedQueue.push({ resolve, reject });
+          }).then(newToken => {
+            // Retry with new token
+            const newConfig = {
+              ...config,
+              headers: {
+                ...config.headers,
+                Authorization: `Bearer ${newToken}`,
+              },
+            };
+            return fetch(url, newConfig).then(res => res.json());
+          });
+        }
 
+        // Try to refresh token
+        this.isRefreshing = true;
+
+        try {
+          const newToken = await this.refreshAccessToken();
+          this.setTokens(newToken);
+          
+          // Process queued requests
+          this.processQueue(null, newToken);
+          
+          // Retry original request with new token
+          const newConfig = {
+            ...config,
+            headers: {
+              ...config.headers,
+              Authorization: `Bearer ${newToken}`,
+            },
+          };
+          
+          const retryResponse = await fetch(url, newConfig);
+          const retryData = await retryResponse.json();
+          
+          if (!retryResponse.ok) {
+            throw new Error(retryData.message || `HTTP error! status: ${retryResponse.status}`);
+          }
+          
+          return retryData;
+          
+        } catch (refreshError) {
+          // Refresh failed, clear tokens and redirect to login
+          this.processQueue(refreshError, null);
+          this.clearTokens();
+          
+          // Redirect to login page
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          
+          throw new Error('Session expired. Please login again.');
+        } finally {
+          this.isRefreshing = false;
+        }
+      }
+
+      const data = await response.json();
+      
       if (!response.ok) {
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
 
       return data;
     } catch (error) {
-      console.error('API Error:', error);
+      // If it's not a refresh-related error, log and throw
+      if (!error.message.includes('Session expired')) {
+        console.error('API Error:', error);
+      }
       throw error;
     }
   }
@@ -51,16 +170,30 @@ class ApiClient {
   }
 
   async login(credentials) {
-    return this.request('/auth/login', {
+    const response = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+    
+    // Store tokens after successful login
+    if (response.token) {
+      this.setTokens(response.token, response.refreshToken);
+    }
+    
+    return response;
   }
 
   async logout() {
-    return this.request('/auth/logout', {
-      method: 'POST',
-    });
+    try {
+      await this.request('/auth/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      // Even if logout fails on server, clear local tokens
+      console.warn('Logout request failed:', error);
+    } finally {
+      this.clearTokens();
+    }
   }
 
   async getProfile() {
@@ -217,7 +350,6 @@ class ApiClient {
   async uploadAvatar(avatarFile) {
     const formData = new FormData();
     formData.append('avatar', avatarFile);
-    
     return this.request('/profile/avatar', {
       method: 'POST',
       body: formData,

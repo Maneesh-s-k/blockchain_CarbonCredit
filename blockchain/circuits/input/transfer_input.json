@@ -1,0 +1,12 @@
+{
+  "senderBalance": "1000",
+  "senderSecret": "123456789",
+  "transferAmount": "100",
+  "receiverSecret": "987654321",
+  "nonce": "42",
+  "nullifierHash": "15241578750190521",
+  "senderCommitment": "15241578750190521",
+  "newSenderCommitment": "13951578750190521",
+  "receiverCommitment": "9876543210000000",
+  "merkleRoot": "1111111111111111"
+}

@@ -1,0 +1,9 @@
+{
+  "energyProduced": "1000",
+  "deviceSecret": "12345",
+  "timestamp": "1000",
+  "nonce": "42",
+  "minEnergyThreshold": "100",
+  "maxTimestamp": "2000",
+  "carbonFactor": "400"
+}
