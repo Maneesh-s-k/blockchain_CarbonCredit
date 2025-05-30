@@ -1,231 +1,129 @@
 import React, { useState } from 'react';
 import { useWallet } from '../../context/WalletContext';
-import { useAuth } from '../../context/AuthContext';
 import { 
-  FiCreditCard,  // Replace FiWallet with FiCreditCard
-  FiExternalLink, 
-  FiCopy, 
-  FiRefreshCw,
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiX
+  FiDollarSign, 
+  FiCreditCard, 
+  FiPlus,
+  FiArrowUpRight,
+  FiArrowDownLeft,
+  FiLoader,
+  FiEye,
+  FiEyeOff
 } from 'react-icons/fi';
 
 export default function WalletConnect() {
-  const { 
-    isConnected, 
-    account, 
-    balance, 
-    chainId, 
-    isLoading, 
-    error, 
-    isMetaMaskInstalled,
-    connectWallet, 
-    disconnectWallet, 
-    getBalance,
-    switchToSepolia,
-    clearError 
-  } = useWallet();
-  
-  const { user } = useAuth();
-  const [copied, setCopied] = useState(false);
+  const { walletData, paymentMethods, isLoading } = useWallet();
+  const [showBalance, setShowBalance] = useState(true);
 
-  const handleConnect = async () => {
-    try {
-      await connectWallet();
-    } catch (error) {
-      console.error('Connection failed:', error);
-    }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount || 0);
   };
 
-  const handleDisconnect = () => {
-    disconnectWallet();
-  };
-
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-    }
-  };
-
-  const formatAddress = (address) => {
-    if (!address) return '';
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const getNetworkName = (chainId) => {
-    switch (chainId) {
-      case '1': return 'Ethereum Mainnet';
-      case '11155111': return 'Sepolia Testnet';
-      case '137': return 'Polygon';
-      case '80001': return 'Mumbai Testnet';
-      default: return 'Unknown Network';
-    }
-  };
-
-  if (!isMetaMaskInstalled) {
-    return (
-      <div className="wallet-connect-card">
-        <div className="wallet-header">
-          <FiCreditCard className="wallet-icon" />
-          <h3>MetaMask Required</h3>
-        </div>
-        <p className="wallet-description">
-          You need MetaMask to connect your wallet and trade energy credits.
-        </p>
-        <a
-          href="https://metamask.io/download/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="wallet-button primary"
-        >
-          <FiExternalLink />
-          Install MetaMask
-        </a>
-      </div>
-    );
-  }
-
-  if (isConnected) {
-    return (
-      <div className="wallet-connect-card connected">
-        <div className="wallet-header">
-          <div className="wallet-status">
-            <FiCheckCircle className="status-icon connected" />
-            <span>Wallet Connected</span>
-          </div>
-          <button 
-            className="disconnect-btn"
-            onClick={handleDisconnect}
-            title="Disconnect Wallet"
-          >
-            <FiX />
-          </button>
-        </div>
-
-        <div className="wallet-info">
-          <div className="wallet-row">
-            <span className="wallet-label">Address:</span>
-            <div className="wallet-address">
-              <span>{formatAddress(account)}</span>
-              <button
-                className="copy-btn"
-                onClick={() => copyToClipboard(account)}
-                title="Copy Address"
-              >
-                {copied ? <FiCheckCircle /> : <FiCopy />}
-              </button>
-            </div>
-          </div>
-
-          <div className="wallet-row">
-            <span className="wallet-label">Balance:</span>
-            <div className="wallet-balance">
-              <span>{parseFloat(balance).toFixed(4)} ETH</span>
-              <button
-                className="refresh-btn"
-                onClick={getBalance}
-                title="Refresh Balance"
-              >
-                <FiRefreshCw />
-              </button>
-            </div>
-          </div>
-
-          <div className="wallet-row">
-            <span className="wallet-label">Network:</span>
-            <div className="wallet-network">
-              <span>{getNetworkName(chainId)}</span>
-              {chainId !== '11155111' && (
-                <button
-                  className="network-switch-btn"
-                  onClick={switchToSepolia}
-                  title="Switch to Sepolia Testnet"
-                >
-                  Switch to Testnet
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="wallet-actions">
-          <a
-            href={`https://etherscan.io/address/${account}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="wallet-button secondary"
-          >
-            <FiExternalLink />
-            View on Etherscan
-          </a>
-        </div>
-      </div>
-    );
-  }
+  const totalBalance = (walletData.balance || 0) + (walletData.pendingBalance || 0);
 
   return (
-    <div className="wallet-connect-card">
+    <div className="wallet-connect">
       <div className="wallet-header">
-        <FiCreditCard className="wallet-icon" />
-        <h3>Connect Your Wallet</h3>
+        <h3>Wallet</h3>
+        <button 
+          className="balance-toggle"
+          onClick={() => setShowBalance(!showBalance)}
+          title={showBalance ? 'Hide balance' : 'Show balance'}
+        >
+          {showBalance ? <FiEye /> : <FiEyeOff />}
+        </button>
       </div>
-      
-      {error && (
-        <div className="wallet-error">
-          <FiAlertTriangle />
-          <span>{error}</span>
-          <button onClick={clearError} className="error-close">
-            <FiX />
+
+      <div className="wallet-balance">
+        <div className="balance-main">
+          <span className="balance-label">Total Balance</span>
+          <span className="balance-amount">
+            {showBalance ? formatCurrency(totalBalance) : '••••••'}
+          </span>
+        </div>
+        
+        <div className="balance-breakdown">
+          <div className="balance-item">
+            <span className="balance-item-label">Available</span>
+            <span className="balance-item-amount available">
+              {showBalance ? formatCurrency(walletData.balance) : '••••'}
+            </span>
+          </div>
+          <div className="balance-item">
+            <span className="balance-item-label">Pending</span>
+            <span className="balance-item-amount pending">
+              {showBalance ? formatCurrency(walletData.pendingBalance) : '••••'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="wallet-actions">
+        <button className="wallet-action-btn deposit">
+          <FiArrowDownLeft />
+          <span>Deposit</span>
+        </button>
+        <button className="wallet-action-btn withdraw">
+          <FiArrowUpRight />
+          <span>Withdraw</span>
+        </button>
+      </div>
+
+      <div className="payment-methods">
+        <div className="payment-methods-header">
+          <span>Payment Methods</span>
+          <button className="add-payment-btn">
+            <FiPlus />
           </button>
         </div>
-      )}
-
-      <p className="wallet-description">
-        Connect your MetaMask wallet to start trading energy credits on the blockchain.
-      </p>
-
-      <div className="wallet-features">
-        <div className="feature-item">
-          <FiCheckCircle className="feature-icon" />
-          <span>Secure blockchain transactions</span>
-        </div>
-        <div className="feature-item">
-          <FiCheckCircle className="feature-icon" />
-          <span>Trade energy credits</span>
-        </div>
-        <div className="feature-item">
-          <FiCheckCircle className="feature-icon" />
-          <span>Track your earnings</span>
+        
+        <div className="payment-methods-list">
+          {isLoading ? (
+            <div className="payment-loading">
+              <FiLoader className="spinning" />
+              <span>Loading...</span>
+            </div>
+          ) : paymentMethods.length > 0 ? (
+            paymentMethods.slice(0, 2).map(method => (
+              <div key={method.id} className="payment-method-item">
+                <FiCreditCard className="payment-icon" />
+                <div className="payment-details">
+                  <span className="payment-type">{method.type}</span>
+                  <span className="payment-last4">•••• {method.last4}</span>
+                </div>
+                {method.isDefault && (
+                  <span className="default-badge">Default</span>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="no-payment-methods">
+              <FiCreditCard className="no-payment-icon" />
+              <span>No payment methods</span>
+              <button className="add-first-payment">Add Payment Method</button>
+            </div>
+          )}
         </div>
       </div>
 
-      <button
-        className="wallet-button primary"
-        onClick={handleConnect}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <>
-            <div className="spinner-small" />
-            Connecting...
-          </>
-        ) : (
-          <>
-            <FiCreditCard />
-            Connect MetaMask
-          </>
-        )}
-      </button>
-
-      <p className="wallet-disclaimer">
-        By connecting your wallet, you agree to our Terms of Service and Privacy Policy.
-      </p>
+      <div className="wallet-stats">
+        <div className="stat-item">
+          <span className="stat-label">Total Earned</span>
+          <span className="stat-value earned">
+            {showBalance ? formatCurrency(walletData.totalEarnings) : '••••'}
+          </span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Total Spent</span>
+          <span className="stat-value spent">
+            {showBalance ? formatCurrency(walletData.totalSpent) : '••••'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
-

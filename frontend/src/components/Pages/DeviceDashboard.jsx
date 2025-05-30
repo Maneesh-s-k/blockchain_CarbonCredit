@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import apiClient from '../../services/api';
 import { 
   FiZap, 
   FiPlus, 
@@ -16,7 +17,9 @@ import {
   FiRefreshCw,
   FiSun,
   FiWind,
-  FiDroplet
+  FiDroplet,
+  FiLoader,
+  FiAlertTriangle
 } from 'react-icons/fi';
 
 export default function DeviceDashboard() {
@@ -30,149 +33,77 @@ export default function DeviceDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({});
   
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Mock data for demonstration
-  const mockDevices = [
-    {
-      _id: '1',
-      deviceName: 'Rooftop Solar Panel System',
-      deviceType: 'solar',
-      capacity: 5.5,
-      location: '123 Main St, San Francisco, CA',
-      verificationStatus: 'approved',
-      totalEnergyProduced: 1250.5,
-      createdAt: '2024-01-15T10:30:00Z',
-      description: 'High-efficiency solar panel system installed on residential rooftop'
-    },
-    {
-      _id: '2',
-      deviceName: 'Backyard Wind Turbine',
-      deviceType: 'wind',
-      capacity: 2.0,
-      location: '456 Oak Ave, Portland, OR',
-      verificationStatus: 'pending',
-      totalEnergyProduced: 0,
-      createdAt: '2024-02-20T14:15:00Z',
-      description: 'Small residential wind turbine for supplemental energy'
-    },
-    {
-      _id: '3',
-      deviceName: 'Micro Hydro Generator',
-      deviceType: 'hydro',
-      capacity: 1.2,
-      location: '789 River Rd, Seattle, WA',
-      verificationStatus: 'rejected',
-      totalEnergyProduced: 0,
-      createdAt: '2024-03-10T09:45:00Z',
-      description: 'Stream-powered micro hydro system'
-    }
-  ];
-
   useEffect(() => {
     fetchDevices();
-    fetchStats();
-  }, [filter]);
+  }, [filter, currentPage]);
 
   const fetchDevices = async () => {
     try {
       setIsLoading(true);
+      setError('');
       
-      // Simulate API call
-      setTimeout(() => {
-        let filteredDevices = mockDevices;
-        if (filter !== 'all') {
-          filteredDevices = mockDevices.filter(device => device.verificationStatus === filter);
-        }
-        setDevices(filteredDevices);
-        setIsLoading(false);
-      }, 1000);
-
-      // Uncomment when backend is ready
-      /*
-      const statusParam = filter !== 'all' ? `?status=${filter}` : '';
-      const response = await fetch(`http://localhost:3001/api/devices${statusParam}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const params = {
+        page: currentPage,
+        limit: 10
+      };
       
-      const data = await response.json();
-      if (data.success) {
-        setDevices(data.devices);
-      } else {
-        setError(data.message);
+      if (filter !== 'all') {
+        params.status = filter;
       }
-      */
+
+      const response = await apiClient.getUserDevices(params);
+      
+      if (response.success) {
+        setDevices(response.devices);
+        setPagination(response.pagination);
+        setStats(response.stats);
+      } else {
+        setError(response.message || 'Failed to fetch devices');
+      }
     } catch (error) {
       console.error('Error fetching devices:', error);
-      setError('Failed to fetch devices');
+      setError('Failed to fetch devices. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      // Mock stats
-      const mockStats = {
-        totalDevices: mockDevices.length,
-        approvedDevices: mockDevices.filter(d => d.verificationStatus === 'approved').length,
-        pendingDevices: mockDevices.filter(d => d.verificationStatus === 'pending').length,
-        totalCapacity: mockDevices.reduce((sum, d) => sum + d.capacity, 0)
-      };
-      setStats(mockStats);
-
-      // Uncomment when backend is ready
-      /*
-      const response = await fetch('http://localhost:3001/api/devices/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.stats);
-      }
-      */
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const handleDeleteDevice = async (deviceId) => {
-    if (!window.confirm('Are you sure you want to delete this device?')) {
+  const handleDeleteDevice = async (deviceId, deviceName) => {
+    if (!window.confirm(`Are you sure you want to delete "${deviceName}"? This action cannot be undone.`)) {
       return;
     }
 
     try {
-      // Mock delete
-      setDevices(devices.filter(device => device._id !== deviceId));
-      fetchStats();
-
-      // Uncomment when backend is ready
-      /*
-      const response = await fetch(`http://localhost:3001/api/devices/${deviceId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const response = await apiClient.request(`/devices/${deviceId}`, {
+        method: 'DELETE'
       });
-      
-      const data = await response.json();
-      if (data.success) {
+
+      if (response.success) {
         setDevices(devices.filter(device => device._id !== deviceId));
-        fetchStats();
+        setStats(prev => ({
+          ...prev,
+          totalDevices: prev.totalDevices - 1
+        }));
+        // Show success message
+        alert('Device deleted successfully');
       } else {
-        setError(data.message);
+        alert(response.message || 'Failed to delete device');
       }
-      */
     } catch (error) {
       console.error('Error deleting device:', error);
-      setError('Failed to delete device');
+      alert('Failed to delete device. Please try again.');
     }
+  };
+
+  const handleRefresh = () => {
+    setCurrentPage(1);
+    fetchDevices();
   };
 
   const getStatusIcon = (status) => {
@@ -216,6 +147,18 @@ export default function DeviceDashboard() {
     }
   };
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   return (
     <div className="device-dashboard">
       <div className="dashboard-container">
@@ -228,8 +171,9 @@ export default function DeviceDashboard() {
           <div className="header-actions">
             <button 
               className="refresh-btn"
-              onClick={() => { fetchDevices(); fetchStats(); }}
+              onClick={handleRefresh}
               disabled={isLoading}
+              title="Refresh"
             >
               <FiRefreshCw className={isLoading ? 'spinning' : ''} />
             </button>
@@ -246,7 +190,7 @@ export default function DeviceDashboard() {
         {/* Error Display */}
         {error && (
           <div className="error-banner">
-            <FiXCircle />
+            <FiAlertTriangle />
             <span>{error}</span>
             <button onClick={() => setError('')}>×</button>
           </div>
@@ -327,7 +271,7 @@ export default function DeviceDashboard() {
         <div className="devices-section">
           {isLoading ? (
             <div className="loading-state">
-              <div className="spinner"></div>
+              <FiLoader className="spinning" />
               <p>Loading devices...</p>
             </div>
           ) : devices.length === 0 ? (
@@ -351,92 +295,133 @@ export default function DeviceDashboard() {
               )}
             </div>
           ) : (
-            <div className="devices-grid">
-              {devices.map(device => (
-                <div key={device._id} className="device-card">
-                  <div className="device-header">
-                    <div className="device-type">
-                      <span className="type-emoji">{getDeviceTypeEmoji(device.deviceType)}</span>
-                      <span className="type-name">{device.deviceType}</span>
-                    </div>
-                    <div className="device-status">
-                      {getStatusIcon(device.verificationStatus)}
-                      <span className={`status-text ${getStatusColor(device.verificationStatus)}`}>
-                        {device.verificationStatus}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="device-content">
-                    <h3 className="device-name">{device.deviceName}</h3>
-                    <div className="device-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Capacity:</span>
-                        <span className="detail-value">{device.capacity} kW</span>
+            <>
+              <div className="devices-grid">
+                {devices.map(device => (
+                  <div key={device._id} className="device-card">
+                    <div className="device-header">
+                      <div className="device-type">
+                        <span className="type-emoji">{getDeviceTypeEmoji(device.deviceType)}</span>
+                        <span className="type-name">{device.deviceType}</span>
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Location:</span>
-                        <span className="detail-value">{device.location}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Registered:</span>
-                        <span className="detail-value">
-                          {new Date(device.createdAt).toLocaleDateString()}
+                      <div className="device-status">
+                        {getStatusIcon(device.verification?.status || 'pending')}
+                        <span className={`status-text ${getStatusColor(device.verification?.status || 'pending')}`}>
+                          {device.verification?.status || 'pending'}
                         </span>
                       </div>
-                      {device.totalEnergyProduced > 0 && (
+                    </div>
+
+                    <div className="device-content">
+                      <h3 className="device-name">{device.deviceName}</h3>
+                      <div className="device-details">
                         <div className="detail-item">
-                          <span className="detail-label">Energy Produced:</span>
-                          <span className="detail-value">{device.totalEnergyProduced} kWh</span>
+                          <span className="detail-label">Capacity:</span>
+                          <span className="detail-value">{device.capacity} kW</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Location:</span>
+                          <span className="detail-value">{device.location?.address || device.location}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Registered:</span>
+                          <span className="detail-value">
+                            {formatDate(device.createdAt)}
+                          </span>
+                        </div>
+                        {device.energyProduction?.totalProduced > 0 && (
+                          <div className="detail-item">
+                            <span className="detail-label">Energy Produced:</span>
+                            <span className="detail-value">{device.energyProduction.totalProduced} kWh</span>
+                          </div>
+                        )}
+                        {device.specifications?.manufacturer && (
+                          <div className="detail-item">
+                            <span className="detail-label">Manufacturer:</span>
+                            <span className="detail-value">{device.specifications.manufacturer}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {device.description && (
+                        <div className="device-description">
+                          <p>{device.description}</p>
+                        </div>
+                      )}
+
+                      {device.verification?.notes && device.verification.status === 'rejected' && (
+                        <div className="rejection-notes">
+                          <strong>Rejection Reason:</strong>
+                          <p>{device.verification.notes}</p>
                         </div>
                       )}
                     </div>
 
-                    {device.description && (
-                      <div className="device-description">
-                        <p>{device.description}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="device-actions">
-                    <button 
-                      className="action-btn view-btn"
-                      onClick={() => navigate(`/devices/${device._id}`)}
-                      title="View Details"
-                    >
-                      <FiEye />
-                    </button>
-                    
-                    {device.verificationStatus !== 'approved' && (
+                    <div className="device-actions">
                       <button 
-                        className="action-btn edit-btn"
-                        onClick={() => navigate(`/devices/${device._id}/edit`)}
-                        title="Edit Device"
+                        className="action-btn view-btn"
+                        onClick={() => navigate(`/devices/${device._id}`)}
+                        title="View Details"
                       >
-                        <FiEdit3 />
+                        <FiEye />
                       </button>
-                    )}
-                    
-                    <button 
-                      className="action-btn settings-btn"
-                      onClick={() => navigate(`/devices/${device._id}/settings`)}
-                      title="Device Settings"
-                    >
-                      <FiSettings />
-                    </button>
-                    
-                    <button 
-                      className="action-btn delete-btn"
-                      onClick={() => handleDeleteDevice(device._id)}
-                      title="Delete Device"
-                    >
-                      <FiTrash2 />
-                    </button>
+                      
+                      {device.verification?.status !== 'approved' && (
+                        <button 
+                          className="action-btn edit-btn"
+                          onClick={() => navigate(`/devices/${device._id}/edit`)}
+                          title="Edit Device"
+                        >
+                          <FiEdit3 />
+                        </button>
+                      )}
+                      
+                      <button 
+                        className="action-btn settings-btn"
+                        onClick={() => navigate(`/devices/${device._id}/settings`)}
+                        title="Device Settings"
+                      >
+                        <FiSettings />
+                      </button>
+                      
+                      <button 
+                        className="action-btn delete-btn"
+                        onClick={() => handleDeleteDevice(device._id, device.deviceName)}
+                        title="Delete Device"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
                   </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {pagination.pages > 1 && (
+                <div className="pagination">
+                  <button 
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="pagination-info">
+                    Page {pagination.current} of {pagination.pages} 
+                    ({pagination.total} total devices)
+                  </div>
+                  
+                  <button 
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === pagination.pages}
+                  >
+                    Next
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
 
@@ -462,7 +447,28 @@ export default function DeviceDashboard() {
             
             <button 
               className="quick-action-card"
-              onClick={() => {/* Export functionality */}}
+              onClick={() => {
+                // Export functionality
+                const csvData = devices.map(device => ({
+                  name: device.deviceName,
+                  type: device.deviceType,
+                  capacity: device.capacity,
+                  status: device.verification?.status,
+                  registered: formatDate(device.createdAt)
+                }));
+                
+                const csv = [
+                  Object.keys(csvData[0]).join(','),
+                  ...csvData.map(row => Object.values(row).join(','))
+                ].join('\n');
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'my-devices.csv';
+                a.click();
+              }}
             >
               <FiDownload className="action-icon" />
               <span>Export Data</span>

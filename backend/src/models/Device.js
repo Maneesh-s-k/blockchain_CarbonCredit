@@ -407,7 +407,7 @@ deviceSchema.statics.getAvailableDevices = function(filters = {}) {
 // Static method to get device statistics
 deviceSchema.statics.getDeviceStats = async function(userId) {
   const stats = await this.aggregate([
-    { $match: { owner: mongoose.Types.ObjectId(userId), isActive: true } },
+    { $match: { owner: new mongoose.Types.ObjectId(userId), isActive: true } },
     {
       $group: {
         _id: null,

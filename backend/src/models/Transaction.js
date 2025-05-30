@@ -285,17 +285,17 @@ transactionSchema.statics.getUserTransactions = function(userId, role = 'both', 
 };
 
 // Static method to get transaction statistics
-transactionSchema.statics.getTransactionStats = async function(userId, role = 'both') {
+  transactionSchema.statics.getTransactionStats = async function(userId, role = 'both') {
   const matchStage = {};
   
   if (role === 'buyer') {
-    matchStage.buyer = mongoose.Types.ObjectId(userId);
+    matchStage.buyer = new new new mongoose.Types.ObjectId(userId); // ADD 'new'
   } else if (role === 'seller') {
-    matchStage.seller = mongoose.Types.ObjectId(userId);
+    matchStage.seller = new new new mongoose.Types.ObjectId(userId); // ADD 'new'
   } else {
     matchStage.$or = [
-      { buyer: mongoose.Types.ObjectId(userId) },
-      { seller: mongoose.Types.ObjectId(userId) }
+      { buyer: new new new mongoose.Types.ObjectId(userId) }, // ADD 'new'
+      { seller: new new new mongoose.Types.ObjectId(userId) } // ADD 'new'
     ];
   }
   

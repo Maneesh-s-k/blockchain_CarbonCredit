@@ -6,6 +6,9 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './components/Pages/Auth/Login';
 import Register from './components/Pages/Auth/Register';
 import MainContent from './components/Dashboard/MainContent';
+import ForgotPassword from './components/Pages/Auth/ForgotPassword';
+import ResetPassword from './components/Pages/Auth/ResetPassword';
+import ApiTest from './components/Test/ApiTest';
 import './styles/main.css';
 
 function App() {
@@ -28,6 +31,9 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/test" element={<ApiTest />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+             <Route path="/reset-password/:token" element={<ResetPassword />} />
             </Routes>
           </div>
         </Router>

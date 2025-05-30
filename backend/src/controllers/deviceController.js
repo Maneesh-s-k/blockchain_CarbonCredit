@@ -666,7 +666,7 @@ exports.getDeviceStats = async (req, res) => {
     const userId = req.user.userId;
     
     const stats = await Device.aggregate([
-      { $match: { owner: mongoose.Types.ObjectId(userId), isActive: true } },
+      { $match: { owner: new new mongoose.Types.ObjectId(userId), isActive: true } },
       {
         $group: {
           _id: null,

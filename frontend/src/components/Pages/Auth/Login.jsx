@@ -32,7 +32,7 @@ export default function Login() {
   }, [isAuthenticated, navigate, from]);
 
   useEffect(() => {
-    clearError();
+    clearError();      ////////hereherehere
   }, [clearError]);
 
   const handleChange = (e) => {

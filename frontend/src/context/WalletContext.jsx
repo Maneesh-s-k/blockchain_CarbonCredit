@@ -1,267 +1,122 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import detectEthereumProvider from '@metamask/detect-provider';
-import { ethers } from 'ethers';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import apiClient from '../services/api';
 
 const WalletContext = createContext();
 
-const initialState = {
-  isConnected: false,
-  account: null,
-  balance: null,
-  chainId: null,
-  provider: null,
-  signer: null,
-  isLoading: false,
-  error: null,
-  isMetaMaskInstalled: false
+export const useWallet = () => {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error('useWallet must be used within a WalletProvider');
+  }
+  return context;
 };
 
-function walletReducer(state, action) {
-  switch (action.type) {
-    case 'WALLET_LOADING':
-      return { ...state, isLoading: true, error: null };
-    case 'WALLET_CONNECTED':
-      return {
-        ...state,
-        isConnected: true,
-        account: action.payload.account,
-        balance: action.payload.balance,
-        chainId: action.payload.chainId,
-        provider: action.payload.provider,
-        signer: action.payload.signer,
-        isLoading: false,
-        error: null
-      };
-    case 'WALLET_DISCONNECTED':
-      return {
-        ...state,
-        isConnected: false,
-        account: null,
-        balance: null,
-        chainId: null,
-        provider: null,
-        signer: null,
-        isLoading: false,
-        error: null
-      };
-    case 'WALLET_ERROR':
-      return {
-        ...state,
-        isLoading: false,
-        error: action.payload
-      };
-    case 'BALANCE_UPDATED':
-      return {
-        ...state,
-        balance: action.payload
-      };
-    case 'METAMASK_DETECTED':
-      return {
-        ...state,
-        isMetaMaskInstalled: action.payload
-      };
-    case 'CLEAR_ERROR':
-      return { ...state, error: null };
-    default:
-      return state;
-  }
-}
+export const WalletProvider = ({ children }) => {
+  const [walletData, setWalletData] = useState({
+    balance: 0,
+    pendingBalance: 0,
+    totalEarnings: 0,
+    totalSpent: 0
+  });
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-export function WalletProvider({ children }) {
-  const [state, dispatch] = useReducer(walletReducer, initialState);
+  const { isAuthenticated, user } = useAuth();
 
-  // Check if MetaMask is installed
   useEffect(() => {
-    const checkMetaMask = async () => {
-      const provider = await detectEthereumProvider();
-      dispatch({ type: 'METAMASK_DETECTED', payload: !!provider });
-    };
-    checkMetaMask();
-  }, []);
-
-  // Check for existing connection on load
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            await connectWallet();
-          }
-        } catch (error) {
-          console.error('Error checking wallet connection:', error);
-        }
-      }
-    };
-    checkConnection();
-  }, []);
-
-  // Listen for account changes
-  useEffect(() => {
-    if (window.ethereum) {
-      const handleAccountsChanged = (accounts) => {
-        if (accounts.length === 0) {
-          dispatch({ type: 'WALLET_DISCONNECTED' });
-        } else if (accounts[0] !== state.account) {
-          connectWallet();
-        }
-      };
-
-      const handleChainChanged = () => {
-        window.location.reload();
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-
-      return () => {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
-      };
+    if (isAuthenticated) {
+      fetchWalletData();
     }
-  }, [state.account]);
+  }, [isAuthenticated]);
 
-  const connectWallet = useCallback(async () => {
-    dispatch({ type: 'WALLET_LOADING' });
-    
+  const fetchWalletData = async () => {
     try {
-      if (!window.ethereum) {
-        throw new Error('MetaMask is not installed');
-      }
-
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      if (accounts.length === 0) {
-        throw new Error('No accounts found');
-      }
-
-      // Create provider and signer
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const account = accounts[0];
-
-      // Get balance
-      const balance = await provider.getBalance(account);
-      const formattedBalance = ethers.formatEther(balance);
-
-      // Get chain ID
-      const network = await provider.getNetwork();
-      const chainId = network.chainId.toString();
-
-      dispatch({
-        type: 'WALLET_CONNECTED',
-        payload: {
-          account,
-          balance: formattedBalance,
-          chainId,
-          provider,
-          signer
-        }
-      });
-
-      // Update user's wallet address in backend
-      await updateUserWalletAddress(account);
-
-      return { account, balance: formattedBalance, chainId };
-    } catch (error) {
-      console.error('Wallet connection error:', error);
-      dispatch({ type: 'WALLET_ERROR', payload: error.message });
-      throw error;
-    }
-  }, []);
-
-  const disconnectWallet = useCallback(() => {
-    dispatch({ type: 'WALLET_DISCONNECTED' });
-    localStorage.removeItem('walletConnected');
-  }, []);
-
-  const updateUserWalletAddress = async (walletAddress) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        await fetch('http://localhost:3001/api/auth/update-wallet', {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ walletAddress }),
-        });
+      setIsLoading(true);
+      const response = await apiClient.getWalletInfo();
+      
+      if (response.success) {
+        setWalletData(response.wallet);
+        setPaymentMethods(response.paymentMethods || []);
+        setTransactions(response.recentTransactions || []);
       }
     } catch (error) {
-      console.error('Error updating wallet address:', error);
+      console.error('Failed to fetch wallet data:', error);
+      setError('Failed to load wallet data');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getBalance = useCallback(async () => {
-    if (state.provider && state.account) {
-      try {
-        const balance = await state.provider.getBalance(state.account);
-        const formattedBalance = ethers.formatEther(balance);
-        dispatch({ type: 'BALANCE_UPDATED', payload: formattedBalance });
-        return formattedBalance;
-      } catch (error) {
-        console.error('Error getting balance:', error);
-      }
-    }
-  }, [state.provider, state.account]);
-
-  const switchToMainnet = useCallback(async () => {
+  const addPaymentMethod = async (paymentMethodData) => {
     try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x1' }], // Mainnet
-      });
-    } catch (error) {
-      console.error('Error switching to mainnet:', error);
-      throw error;
-    }
-  }, []);
-
-  const switchToSepolia = useCallback(async () => {
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0xaa36a7' }], // Sepolia testnet
-      });
-    } catch (error) {
-      if (error.code === 4902) {
-        // Chain not added, add it
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: '0xaa36a7',
-            chainName: 'Sepolia Test Network',
-            nativeCurrency: {
-              name: 'Ethereum',
-              symbol: 'ETH',
-              decimals: 18
-            },
-            rpcUrls: ['https://sepolia.infura.io/v3/'],
-            blockExplorerUrls: ['https://sepolia.etherscan.io/']
-          }]
-        });
+      setIsLoading(true);
+      const response = await apiClient.addPaymentMethod(paymentMethodData);
+      
+      if (response.success) {
+        await fetchWalletData(); // Refresh data
+        return { success: true };
       } else {
-        throw error;
+        return { success: false, message: response.message };
       }
+    } catch (error) {
+      console.error('Failed to add payment method:', error);
+      return { success: false, message: error.message };
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
-  const clearError = useCallback(() => {
-    dispatch({ type: 'CLEAR_ERROR' });
-  }, []);
+  const depositFunds = async (amount, paymentMethodId) => {
+    try {
+      setIsLoading(true);
+      const response = await apiClient.depositFunds({ amount, paymentMethodId });
+      
+      if (response.success) {
+        await fetchWalletData(); // Refresh data
+        return { success: true, transaction: response.transaction };
+      } else {
+        return { success: false, message: response.message };
+      }
+    } catch (error) {
+      console.error('Failed to deposit funds:', error);
+      return { success: false, message: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const withdrawFunds = async (amount, paymentMethodId) => {
+    try {
+      setIsLoading(true);
+      const response = await apiClient.withdrawFunds({ amount, paymentMethodId });
+      
+      if (response.success) {
+        await fetchWalletData(); // Refresh data
+        return { success: true, transaction: response.transaction };
+      } else {
+        return { success: false, message: response.message };
+      }
+    } catch (error) {
+      console.error('Failed to withdraw funds:', error);
+      return { success: false, message: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const value = {
-    ...state,
-    connectWallet,
-    disconnectWallet,
-    getBalance,
-    switchToMainnet,
-    switchToSepolia,
-    clearError
+    walletData,
+    paymentMethods,
+    transactions,
+    isLoading,
+    error,
+    fetchWalletData,
+    addPaymentMethod,
+    depositFunds,
+    withdrawFunds
   };
 
   return (
@@ -269,12 +124,4 @@ export function WalletProvider({ children }) {
       {children}
     </WalletContext.Provider>
   );
-}
-
-export function useWallet() {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useWallet must be used within a WalletProvider');
-  }
-  return context;
-}
+};
