@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import apiClient from '../services/api';
+import apiClient from '../services/apiService';
 
 const WalletContext = createContext();
 

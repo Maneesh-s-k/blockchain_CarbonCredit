@@ -285,20 +285,20 @@ transactionSchema.statics.getUserTransactions = function(userId, role = 'both', 
 };
 
 // Static method to get transaction statistics
-  transactionSchema.statics.getTransactionStats = async function(userId, role = 'both') {
+transactionSchema.statics.getTransactionStats = async function(userId, role = 'both') {
   const matchStage = {};
   
   if (role === 'buyer') {
-    matchStage.buyer = new new new mongoose.Types.ObjectId(userId); // ADD 'new'
+    matchStage.buyer = new mongoose.Types.ObjectId(userId); // Fixed: single 'new'
   } else if (role === 'seller') {
-    matchStage.seller = new new new mongoose.Types.ObjectId(userId); // ADD 'new'
+    matchStage.seller = new mongoose.Types.ObjectId(userId); // Fixed: single 'new'
   } else {
     matchStage.$or = [
-      { buyer: new new new mongoose.Types.ObjectId(userId) }, // ADD 'new'
-      { seller: new new new mongoose.Types.ObjectId(userId) } // ADD 'new'
+      { buyer: new mongoose.Types.ObjectId(userId) }, // Fixed: single 'new'
+      { seller: new mongoose.Types.ObjectId(userId) } // Fixed: single 'new'
     ];
   }
-  
+
   const stats = await this.aggregate([
     { $match: matchStage },
     {
@@ -318,7 +318,7 @@ transactionSchema.statics.getUserTransactions = function(userId, role = 'both', 
       }
     }
   ]);
-  
+
   return stats[0] || {
     totalTransactions: 0,
     totalVolume: 0,
@@ -329,5 +329,6 @@ transactionSchema.statics.getUserTransactions = function(userId, role = 'both', 
     averageEnergyAmount: 0
   };
 };
+
 
 module.exports = mongoose.model('Transaction', transactionSchema);

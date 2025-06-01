@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import apiClient from '../../services/api';
-import { 
-  FiZap, 
-  FiMapPin, 
-  FiInfo, 
+import { apiService } from '../../services/apiService';
+import { blockchainService } from '../../services/blockchainService';
+import {
+  FiZap,
+  FiMapPin,
+  FiInfo,
   FiUpload,
   FiCheck,
   FiAlertTriangle,
   FiSun,
   FiWind,
   FiDroplet,
-  FiLoader
+  FiLoader,
+  FiFileText,
+  FiShield
 } from 'react-icons/fi';
 
 export default function RegisterDevice() {
@@ -28,12 +31,15 @@ export default function RegisterDevice() {
     installationDate: '',
     certificationFile: null
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [dragActive, setDragActive] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-  
+  const [registrationStep, setRegistrationStep] = useState(1);
+  const [blockchainTxHash, setBlockchainTxHash] = useState('');
+  const [deviceId, setDeviceId] = useState('');
+
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -42,101 +48,37 @@ export default function RegisterDevice() {
     { value: 'wind', label: 'Wind Turbine', icon: <FiWind />, emoji: '💨' },
     { value: 'hydro', label: 'Hydroelectric', icon: <FiDroplet />, emoji: '💧' },
     { value: 'geothermal', label: 'Geothermal', icon: <FiZap />, emoji: '🌋' },
-    { value: 'biomass', label: 'Biomass', icon: <FiZap />, emoji: '🌱' }
+    { value: 'biomass', label: 'Biomass', icon: <FiZap />, emoji: '🌿' }
   ];
 
-  // Real-time validation
-  const validateField = (name, value) => {
-    const errors = { ...validationErrors };
-
-    switch (name) {
-      case 'deviceName':
-        if (!value.trim()) {
-          errors.deviceName = 'Device name is required';
-        } else if (value.length > 100) {
-          errors.deviceName = 'Device name cannot exceed 100 characters';
-        } else {
-          delete errors.deviceName;
-        }
-        break;
-
-      case 'capacity':
-        const capacityNum = parseFloat(value);
-        if (!value) {
-          errors.capacity = 'Capacity is required';
-        } else if (isNaN(capacityNum)) {
-          errors.capacity = 'Capacity must be a number';
-        } else if (capacityNum < 0.1) {
-          errors.capacity = 'Minimum capacity is 0.1 kW';
-        } else if (capacityNum > 10000) {
-          errors.capacity = 'Maximum capacity is 10,000 kW';
-        } else {
-          delete errors.capacity;
-        }
-        break;
-
-      case 'location':
-        if (!value.trim()) {
-          errors.location = 'Location is required';
-        } else if (value.length > 200) {
-          errors.location = 'Location cannot exceed 200 characters';
-        } else {
-          delete errors.location;
-        }
-        break;
-
-      case 'description':
-        if (value && value.length > 500) {
-          errors.description = 'Description cannot exceed 500 characters';
-        } else {
-          delete errors.description;
-        }
-        break;
-
-      default:
-        break;
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: '' }));
     }
-
-    setValidationErrors(errors);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Clear message when user starts typing
-    if (message.text) {
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      
+      if (file.size > maxSize) {
+        setMessage({ type: 'error', text: 'File size must be less than 10MB' });
+        return;
+      }
+      
+      if (!allowedTypes.includes(file.type)) {
+        setMessage({ type: 'error', text: 'Only PDF and image files are allowed' });
+        return;
+      }
+      
+      setFormData(prev => ({ ...prev, certificationFile: file }));
       setMessage({ type: '', text: '' });
     }
-
-    // Real-time validation
-    validateField(name, value);
-  };
-
-  const handleFileUpload = (file) => {
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      setMessage({ type: 'error', text: 'Only PDF and image files are allowed.' });
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'File size cannot exceed 10MB.' });
-      return;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      certificationFile: file
-    }));
-    setMessage({ type: 'success', text: `File "${file.name}" uploaded successfully!` });
   };
 
   const handleDrag = (e) => {
@@ -155,114 +97,332 @@ export default function RegisterDevice() {
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      const fakeEvent = { target: { files: [file] } };
+      handleFileUpload(fakeEvent);
     }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.deviceName.trim()) {
+      errors.deviceName = 'Device name is required';
+    } else if (formData.deviceName.length > 100) {
+      errors.deviceName = 'Device name cannot exceed 100 characters';
+    }
+    
+    if (!formData.capacity || parseFloat(formData.capacity) < 0.1) {
+      errors.capacity = 'Capacity must be at least 0.1 kW';
+    } else if (parseFloat(formData.capacity) > 10000) {
+      errors.capacity = 'Capacity cannot exceed 10,000 kW';
+    }
+    
+    if (!formData.location.trim()) {
+      errors.location = 'Location is required';
+    } else if (formData.location.length > 200) {
+      errors.location = 'Location cannot exceed 200 characters';
+    }
+    
+    if (!formData.serialNumber.trim()) {
+      errors.serialNumber = 'Serial number is required';
+    }
+    
+    if (!formData.manufacturer.trim()) {
+      errors.manufacturer = 'Manufacturer is required';
+    }
+    
+    if (!formData.installationDate) {
+      errors.installationDate = 'Installation date is required';
+    }
+    
+    if (formData.description && formData.description.length > 500) {
+      errors.description = 'Description cannot exceed 500 characters';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const generateMockProof = () => {
+    // Generate mock ZK-SNARK proof for development
+    return {
+      a: [
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
+      ],
+      b: [
+        [
+          "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+          "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba"
+        ],
+        [
+          "0x1111111111111111111111111111111111111111111111111111111111111111",
+          "0x2222222222222222222222222222222222222222222222222222222222222222"
+        ]
+      ],
+      c: [
+        "0x3333333333333333333333333333333333333333333333333333333333333333",
+        "0x4444444444444444444444444444444444444444444444444444444444444444"
+      ],
+      input: [
+        "0x5555555555555555555555555555555555555555555555555555555555555555"
+      ]
+    };
+  };
+
+  const generateProjectHash = () => {
+    const dataString = JSON.stringify({
+      deviceName: formData.deviceName,
+      serialNumber: formData.serialNumber,
+      location: formData.location,
+      timestamp: Date.now()
+    });
+    
+    let hash = 0;
+    for (let i = 0; i < dataString.length; i++) {
+      const char = dataString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    
+    return `0x${Math.abs(hash).toString(16).padStart(64, '0')}`;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate all required fields
-    const requiredFields = ['deviceName', 'deviceType', 'capacity', 'location'];
-    let hasErrors = false;
-
-    requiredFields.forEach(field => {
-      if (!formData[field]) {
-        validateField(field, formData[field]);
-        hasErrors = true;
-      }
-    });
-
-    if (hasErrors || Object.keys(validationErrors).length > 0) {
-      setMessage({ type: 'error', text: 'Please fix all validation errors before submitting.' });
+    if (!validateForm()) {
+      setMessage({ type: 'error', text: 'Please fix the validation errors before submitting' });
       return;
     }
-
-    setIsLoading(true);
-    setMessage({ type: '', text: '' });
-
+    
     try {
-      // Prepare form data for API
-      const submitData = new FormData();
+      setIsLoading(true);
+      setMessage({ type: '', text: '' });
+      setRegistrationStep(1);
       
-      // Append all form fields
+      // Step 1: Register device with backend
+      const deviceFormData = new FormData();
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') {
-          submitData.append(key, formData[key]);
+        if (key === 'certificationFile' && formData[key]) {
+          deviceFormData.append('certificationFile', formData[key]);
+        } else if (formData[key]) {
+          deviceFormData.append(key, formData[key]);
         }
       });
-
-      const response = await apiClient.registerDevice(submitData);
-
-      if (response.success) {
+      
+      const response = await apiService.registerDevice(deviceFormData);
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to register device');
+      }
+      
+      setDeviceId(response.device.id);
+      setRegistrationStep(2);
+      setMessage({ type: 'success', text: 'Device registered successfully! Now minting blockchain token...' });
+      
+      // Step 2: Mint blockchain token (if blockchain is available)
+      try {
+        const userAddress = await blockchainService.getAccount();
+        
+        if (userAddress) {
+          const deviceData = {
+            owner: userAddress,
+            carbonAmount: Math.floor(parseFloat(formData.capacity) * 100), // Estimate carbon credits
+            energyAmount: Math.floor(parseFloat(formData.capacity) * 1000), // Estimate energy amount
+            projectHash: generateProjectHash(),
+            projectType: formData.deviceType,
+            location: formData.location,
+            vintage: new Date(formData.installationDate).getFullYear(),
+            uri: `ipfs://device-${formData.serialNumber}`
+          };
+          
+          const proof = generateMockProof();
+          
+          const tx = await blockchainService.registerDevice(deviceData, proof);
+          setBlockchainTxHash(tx.hash);
+          setRegistrationStep(3);
+          
+          // Wait for transaction confirmation
+          await tx.wait();
+          setRegistrationStep(4);
+          setMessage({ 
+            type: 'success', 
+            text: 'Device registered and blockchain token minted successfully! 🎉' 
+          });
+        } else {
+          setRegistrationStep(4);
+          setMessage({ 
+            type: 'success', 
+            text: 'Device registered successfully! Blockchain integration not available.' 
+          });
+        }
+      } catch (blockchainError) {
+        console.error('Blockchain registration failed:', blockchainError);
+        setRegistrationStep(4);
         setMessage({ 
           type: 'success', 
-          text: 'Device registered successfully! It will be reviewed within 24-48 hours.' 
+          text: 'Device registered successfully! Blockchain integration failed but device is saved.' 
         });
-        
-        // Reset form after successful submission
-        setTimeout(() => {
-          navigate('/devices');
-        }, 2000);
-      } else {
-        setMessage({ type: 'error', text: response.message || 'Failed to register device' });
       }
+      
     } catch (error) {
       console.error('Device registration error:', error);
-      setMessage({ type: 'error', text: error.message || 'Network error. Please try again.' });
+      setMessage({ type: 'error', text: error.message || 'Failed to register device' });
+      setRegistrationStep(1);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      deviceName: '',
+      deviceType: 'solar',
+      capacity: '',
+      location: '',
+      description: '',
+      serialNumber: '',
+      manufacturer: '',
+      model: '',
+      installationDate: '',
+      certificationFile: null
+    });
+    setValidationErrors({});
+    setMessage({ type: '', text: '' });
+    setRegistrationStep(1);
+    setBlockchainTxHash('');
+    setDeviceId('');
+  };
+
   const selectedDeviceType = deviceTypes.find(type => type.value === formData.deviceType);
+
+  if (registrationStep === 4) {
+    return (
+      <div className="register-device-page">
+        <div className="register-device-container">
+          <div className="registration-form-card">
+            <div className="success-content">
+              <div className="success-icon">
+                <FiCheck size={64} color="var(--success)" />
+              </div>
+              
+              <h2>Device Registered Successfully! 🎉</h2>
+              <p>Your renewable energy device has been registered and is pending verification.</p>
+              
+              <div className="success-details">
+                <div className="detail-item">
+                  <span>Device ID:</span>
+                  <span>{deviceId}</span>
+                </div>
+                <div className="detail-item">
+                  <span>Device Name:</span>
+                  <span>{formData.deviceName}</span>
+                </div>
+                <div className="detail-item">
+                  <span>Type:</span>
+                  <span>{selectedDeviceType?.label}</span>
+                </div>
+                <div className="detail-item">
+                  <span>Capacity:</span>
+                  <span>{formData.capacity} kW</span>
+                </div>
+                {blockchainTxHash && (
+                  <div className="detail-item">
+                    <span>Blockchain TX:</span>
+                    <span className="tx-hash">{blockchainTxHash}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="success-actions">
+                <button 
+                  onClick={() => navigate('/devices')} 
+                  className="primary-btn"
+                >
+                  <FiZap />
+                  View My Devices
+                </button>
+                <button 
+                  onClick={resetForm} 
+                  className="secondary-btn"
+                >
+                  Register Another Device
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="register-device-page">
       <div className="register-device-container">
-        {/* Header */}
         <div className="page-header">
           <div className="header-content">
-            <h1>Register Energy Device</h1>
+            <h1>Register Renewable Energy Device</h1>
             <p>Add your renewable energy device to start trading energy credits</p>
           </div>
-          <div className="device-type-preview">
-            <span className="device-emoji">{selectedDeviceType?.emoji}</span>
-            <span className="device-type-name">{selectedDeviceType?.label}</span>
-          </div>
+          {selectedDeviceType && (
+            <div className="device-type-preview">
+              <span className="device-emoji">{selectedDeviceType.emoji}</span>
+              <span className="device-type-name">{selectedDeviceType.label}</span>
+            </div>
+          )}
         </div>
 
-        {/* Message Display */}
+        {/* Progress Steps */}
+        {isLoading && (
+          <div className="progress-steps">
+            <div className={`step ${registrationStep >= 1 ? 'active' : ''}`}>
+              <span>1</span>
+              <label>Backend Registration</label>
+            </div>
+            <div className={`step ${registrationStep >= 2 ? 'active' : ''}`}>
+              <span>2</span>
+              <label>Blockchain Minting</label>
+            </div>
+            <div className={`step ${registrationStep >= 3 ? 'active' : ''}`}>
+              <span>3</span>
+              <label>Transaction Confirmation</label>
+            </div>
+            <div className={`step ${registrationStep >= 4 ? 'active' : ''}`}>
+              <span>4</span>
+              <label>Complete</label>
+            </div>
+          </div>
+        )}
+
         {message.text && (
           <div className={`message-banner ${message.type}`}>
-            {message.type === 'success' ? <FiCheck /> : <FiAlertTriangle />}
-            <span>{message.text}</span>
+            {message.type === 'error' ? <FiAlertTriangle /> : <FiCheck />}
+            {message.text}
             <button onClick={() => setMessage({ type: '', text: '' })}>×</button>
           </div>
         )}
 
-        {/* Registration Form */}
         <div className="registration-form-card">
           <form onSubmit={handleSubmit} className="registration-form">
-            {/* Device Basic Info */}
+            {/* Basic Information */}
             <div className="form-section">
-              <h3 className="section-title">
+              <div className="section-title">
                 <FiZap />
-                Device Information
-              </h3>
+                Basic Information
+              </div>
               
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="deviceName">Device Name *</label>
+                  <label>Device Name *</label>
                   <input
                     type="text"
-                    id="deviceName"
-                    name="deviceName"
                     value={formData.deviceName}
-                    onChange={handleInputChange}
-                    placeholder="My Solar Panel System"
+                    onChange={(e) => handleInputChange('deviceName', e.target.value)}
+                    placeholder="e.g., Rooftop Solar Panel System"
                     className={validationErrors.deviceName ? 'error' : ''}
-                    required
+                    maxLength={100}
                   />
                   {validationErrors.deviceName && (
                     <span className="error-text">{validationErrors.deviceName}</span>
@@ -270,17 +430,14 @@ export default function RegisterDevice() {
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="deviceType">Device Type *</label>
+                  <label>Device Type *</label>
                   <select
-                    id="deviceType"
-                    name="deviceType"
                     value={formData.deviceType}
-                    onChange={handleInputChange}
-                    required
+                    onChange={(e) => handleInputChange('deviceType', e.target.value)}
                   >
                     {deviceTypes.map(type => (
                       <option key={type.value} value={type.value}>
-                        {type.emoji} {type.label}
+                        {type.label}
                       </option>
                     ))}
                   </select>
@@ -289,126 +446,123 @@ export default function RegisterDevice() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="capacity">Capacity (kW) *</label>
+                  <label>Capacity (kW) *</label>
                   <input
                     type="number"
-                    id="capacity"
-                    name="capacity"
                     value={formData.capacity}
-                    onChange={handleInputChange}
-                    placeholder="5.5"
-                    step="0.1"
+                    onChange={(e) => handleInputChange('capacity', e.target.value)}
+                    placeholder="e.g., 10.5"
                     min="0.1"
                     max="10000"
+                    step="0.1"
                     className={validationErrors.capacity ? 'error' : ''}
-                    required
                   />
                   {validationErrors.capacity && (
                     <span className="error-text">{validationErrors.capacity}</span>
                   )}
-                  <small>Enter the maximum power output in kilowatts</small>
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="manufacturer">Manufacturer</label>
+                  <label>Installation Date *</label>
                   <input
-                    type="text"
-                    id="manufacturer"
-                    name="manufacturer"
-                    value={formData.manufacturer}
-                    onChange={handleInputChange}
-                    placeholder="Tesla, SunPower, etc."
+                    type="date"
+                    value={formData.installationDate}
+                    onChange={(e) => handleInputChange('installationDate', e.target.value)}
+                    className={validationErrors.installationDate ? 'error' : ''}
                   />
+                  {validationErrors.installationDate && (
+                    <span className="error-text">{validationErrors.installationDate}</span>
+                  )}
                 </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="model">Model</label>
-                  <input
-                    type="text"
-                    id="model"
-                    name="model"
-                    value={formData.model}
-                    onChange={handleInputChange}
-                    placeholder="Model number or name"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="serialNumber">Serial Number</label>
-                  <input
-                    type="text"
-                    id="serialNumber"
-                    name="serialNumber"
-                    value={formData.serialNumber}
-                    onChange={handleInputChange}
-                    placeholder="ABC123XYZ789"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="installationDate">Installation Date</label>
-                <input
-                  type="date"
-                  id="installationDate"
-                  name="installationDate"
-                  value={formData.installationDate}
-                  onChange={handleInputChange}
-                  max={new Date().toISOString().split('T')[0]}
-                />
               </div>
             </div>
 
-            {/* Location Info */}
+            {/* Location Information */}
             <div className="form-section">
-              <h3 className="section-title">
+              <div className="section-title">
                 <FiMapPin />
-                Location Details
-              </h3>
+                Location Information
+              </div>
               
               <div className="form-group">
-                <label htmlFor="location">Installation Location *</label>
+                <label>Installation Address *</label>
                 <input
                   type="text"
-                  id="location"
-                  name="location"
                   value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="123 Main St, City, State, ZIP"
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="e.g., 123 Green Street, San Francisco, CA 94102"
                   className={validationErrors.location ? 'error' : ''}
-                  required
+                  maxLength={200}
                 />
                 {validationErrors.location && (
                   <span className="error-text">{validationErrors.location}</span>
                 )}
-                <small>Provide the complete address where the device is installed</small>
               </div>
             </div>
 
-            {/* Description */}
+            {/* Technical Details */}
             <div className="form-section">
-              <h3 className="section-title">
+              <div className="section-title">
                 <FiInfo />
-                Additional Information
-              </h3>
+                Technical Details
+              </div>
               
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Manufacturer *</label>
+                  <input
+                    type="text"
+                    value={formData.manufacturer}
+                    onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+                    placeholder="e.g., Tesla, SunPower"
+                    className={validationErrors.manufacturer ? 'error' : ''}
+                    maxLength={100}
+                  />
+                  {validationErrors.manufacturer && (
+                    <span className="error-text">{validationErrors.manufacturer}</span>
+                  )}
+                </div>
+                
+                <div className="form-group">
+                  <label>Model</label>
+                  <input
+                    type="text"
+                    value={formData.model}
+                    onChange={(e) => handleInputChange('model', e.target.value)}
+                    placeholder="e.g., Model S Solar Roof"
+                    maxLength={100}
+                  />
+                </div>
+              </div>
+
               <div className="form-group">
-                <label htmlFor="description">Description (Optional)</label>
+                <label>Serial Number *</label>
+                <input
+                  type="text"
+                  value={formData.serialNumber}
+                  onChange={(e) => handleInputChange('serialNumber', e.target.value)}
+                  placeholder="e.g., SN123456789"
+                  className={validationErrors.serialNumber ? 'error' : ''}
+                  maxLength={50}
+                />
+                {validationErrors.serialNumber && (
+                  <span className="error-text">{validationErrors.serialNumber}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
                 <textarea
-                  id="description"
-                  name="description"
                   value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Additional details about your device setup, orientation, special features, etc."
-                  rows="4"
-                  maxLength="500"
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Additional details about the device installation..."
+                  rows="3"
+                  maxLength={500}
                   className={validationErrors.description ? 'error' : ''}
                 />
                 <div className="char-count">
-                  <span className={formData.description.length > 450 ? 'warning' : ''}>
-                    {formData.description.length}/500 characters
+                  <span className={formData.description?.length > 450 ? 'warning' : ''}>
+                    {formData.description?.length || 0}/500
                   </span>
                 </div>
                 {validationErrors.description && (
@@ -419,10 +573,10 @@ export default function RegisterDevice() {
 
             {/* File Upload */}
             <div className="form-section">
-              <h3 className="section-title">
+              <div className="section-title">
                 <FiUpload />
-                Certification Documents
-              </h3>
+                Certification Document
+              </div>
               
               <div 
                 className={`file-upload-area ${dragActive ? 'drag-active' : ''}`}
@@ -430,38 +584,49 @@ export default function RegisterDevice() {
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
+                onClick={() => document.getElementById('file-input').click()}
               >
-                <FiUpload className="upload-icon" />
-                <p>
-                  {formData.certificationFile 
-                    ? `Selected: ${formData.certificationFile.name}`
-                    : 'Drag and drop your certification PDF here, or click to browse'
-                  }
-                </p>
                 <input
+                  id="file-input"
                   type="file"
+                  onChange={handleFileUpload}
                   accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => handleFileUpload(e.target.files[0])}
                   style={{ display: 'none' }}
-                  id="file-upload"
                 />
-                <label htmlFor="file-upload" className="upload-button">
-                  Choose File
-                </label>
+                
+                <div className="upload-icon">
+                  {formData.certificationFile ? <FiFileText /> : <FiUpload />}
+                </div>
+                
+                {formData.certificationFile ? (
+                  <div>
+                    <p><strong>{formData.certificationFile.name}</strong></p>
+                    <p>Size: {(formData.certificationFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p>Drag and drop your certification file here, or click to browse</p>
+                    <p><small>Supports PDF, JPG, PNG files up to 10MB</small></p>
+                  </div>
+                )}
+                
+                <div className="upload-button">
+                  {formData.certificationFile ? 'Change File' : 'Choose File'}
+                </div>
               </div>
-              <small>Upload installation certificates, warranties, or compliance documents (PDF, JPG, PNG - Max 10MB)</small>
             </div>
 
-            {/* Submit Button */}
             <button 
               type="submit" 
               className="submit-button"
-              disabled={isLoading || Object.keys(validationErrors).length > 0}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <FiLoader className="spinning" />
-                  Registering Device...
+                  <div className="spinner"></div>
+                  {registrationStep === 1 && 'Registering Device...'}
+                  {registrationStep === 2 && 'Minting Blockchain Token...'}
+                  {registrationStep === 3 && 'Confirming Transaction...'}
                 </>
               ) : (
                 <>
@@ -480,33 +645,40 @@ export default function RegisterDevice() {
             <div className="step">
               <div className="step-number">1</div>
               <div className="step-content">
-                <h5>Submit Application</h5>
+                <h5>Submit Registration</h5>
                 <p>Fill out the device registration form with accurate information</p>
               </div>
             </div>
             <div className="step">
               <div className="step-number">2</div>
               <div className="step-content">
-                <h5>Verification</h5>
+                <h5>Verification Review</h5>
                 <p>Our team will verify your device specifications and documentation within 24-48 hours</p>
               </div>
             </div>
             <div className="step">
               <div className="step-number">3</div>
               <div className="step-content">
-                <h5>Approval & Trading</h5>
-                <p>Once approved, you can start trading energy credits immediately</p>
+                <h5>Blockchain Integration</h5>
+                <p>Once approved, your device will be registered on the blockchain for carbon credit generation</p>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-number">4</div>
+              <div className="step-content">
+                <h5>Start Trading</h5>
+                <p>Begin generating and trading energy credits immediately after approval</p>
               </div>
             </div>
           </div>
 
           <div className="help-section">
             <h5>Need Help?</h5>
-            <p>
-              Contact our support team if you have questions about device registration
-              or need assistance with the verification process.
-            </p>
-            <button className="help-button">Contact Support</button>
+            <p>Contact our support team if you have questions about device registration or need assistance with the verification process.</p>
+            <button className="help-button">
+              <FiInfo />
+              Contact Support
+            </button>
           </div>
         </div>
       </div>

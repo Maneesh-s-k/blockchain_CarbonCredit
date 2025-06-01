@@ -25,7 +25,9 @@
 @import './components/history.css';
 @import './components/payments.css';
 @import './components/settings.css';
-
+@import './components/marketplace.css';
+@import './components/profile.css';
+@import './components/analytics-dashboard.css';
 /* Responsive */
 @import './responsive/breakpoints.css';
 

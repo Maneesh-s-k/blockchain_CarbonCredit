@@ -22,6 +22,10 @@ const validateWithdrawal = [
 
 // Payment routes
 router.get('/wallet', paymentController.getWalletInfo);
+
+// ADD THIS MISSING ROUTE - This is what your frontend is calling
+router.get('/methods', paymentController.getPaymentMethods);
+
 router.post('/methods', validatePaymentMethod, paymentController.addPaymentMethod);
 router.post('/deposit', validateDeposit, paymentController.depositFunds);
 router.post('/withdraw', validateWithdrawal, paymentController.withdrawFunds);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import apiClient from '../../services/api';
+import apiClient from '../../services/apiService';
 
 export default function ApiTest() {
   const [result, setResult] = useState('');
