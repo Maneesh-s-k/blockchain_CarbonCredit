@@ -23,7 +23,23 @@ class ApiService {
   async handleResponse(response) {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Network error' }));
-      throw new Error(error.message || 'API request failed');
+      
+      // Handle specific error cases
+      if (response.status === 401) {
+        console.warn('🚫 Authentication failed - clearing token');
+        this.clearAuthToken();
+        throw new Error('Authentication required. Please log in.');
+      }
+      
+      if (response.status === 403) {
+        throw new Error('Access forbidden. You don\'t have permission.');
+      }
+      
+      if (response.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      }
+      
+      throw new Error(error.message || `API request failed (${response.status})`);
     }
     return response.json();
   }
@@ -37,14 +53,11 @@ class ApiService {
       },
       body: JSON.stringify(credentials)
     });
-    
     const data = await this.handleResponse(response);
-    
     // Store token after successful login
-    if (data.success && data.token) {
-      this.setAuthToken(data.token);
+    if (data.success && (data.token || data.tokens?.accessToken)) {
+      this.setAuthToken(data.token || data.tokens.accessToken);
     }
-    
     return data;
   }
 
@@ -130,10 +143,8 @@ class ApiService {
       method: 'POST',
       headers: this.getHeaders()
     });
-    
     // Clear token regardless of response
     this.clearAuthToken();
-    
     return this.handleResponse(response);
   }
 
@@ -376,9 +387,12 @@ class ApiService {
   }
 
   async getUserPublicProfile(userId) {
+    // FIXED: Remove authentication for public profile
     const response = await fetch(`${API_BASE_URL}/users/${userId}/public`, {
       method: 'GET',
-      headers: this.getHeaders()
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
     return this.handleResponse(response);
   }
@@ -395,82 +409,78 @@ class ApiService {
   async getPlatformStats() {
     const response = await fetch(`${API_BASE_URL}/users/stats`, {
       method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    return this.handleResponse(response);
+  }
+
+  // Analytics API calls - NEW ANALYTICS INTEGRATION
+  async getDashboardAnalytics(timeframe = '30d') {
+    const response = await fetch(`${API_BASE_URL}/analytics/dashboard?timeframe=${timeframe}`, {
+      method: 'GET',
       headers: this.getHeaders()
     });
     return this.handleResponse(response);
   }
 
+  async getTradingAnalyticsDetailed(timeframe = '30d') {
+    const response = await fetch(`${API_BASE_URL}/analytics/trading?timeframe=${timeframe}`, {
+      method: 'GET',
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
 
+  async getDeviceAnalytics(deviceId = null, timeframe = '30d') {
+    const endpoint = deviceId 
+      ? `/analytics/devices/${deviceId}?timeframe=${timeframe}`
+      : `/analytics/devices?timeframe=${timeframe}`;
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
 
-  // Analytics API calls - NEW ANALYTICS INTEGRATION
-async getDashboardAnalytics(timeframe = '30d') {
-  const response = await fetch(`${API_BASE_URL}/analytics/dashboard?timeframe=${timeframe}`, {
-    method: 'GET',
-    headers: this.getHeaders()
-  });
-  return this.handleResponse(response);
-}
+  async getCarbonCreditAnalytics(timeframe = '30d') {
+    const response = await fetch(`${API_BASE_URL}/analytics/carbon-credits?timeframe=${timeframe}`, {
+      method: 'GET',
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
 
-async getTradingAnalyticsDetailed(timeframe = '30d') {
-  const response = await fetch(`${API_BASE_URL}/analytics/trading?timeframe=${timeframe}`, {
-    method: 'GET',
-    headers: this.getHeaders()
-  });
-  return this.handleResponse(response);
-}
+  async getMarketData() {
+    const response = await fetch(`${API_BASE_URL}/analytics/market`, {
+      method: 'GET',
+      headers: this.getHeaders()
+    });
+    return this.handleResponse(response);
+  }
 
-async getDeviceAnalytics(deviceId = null, timeframe = '30d') {
-  const endpoint = deviceId 
-    ? `/analytics/devices/${deviceId}?timeframe=${timeframe}`
-    : `/analytics/devices?timeframe=${timeframe}`;
-  
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: 'GET',
-    headers: this.getHeaders()
-  });
-  return this.handleResponse(response);
-}
-
-async getCarbonCreditAnalytics(timeframe = '30d') {
-  const response = await fetch(`${API_BASE_URL}/analytics/carbon-credits?timeframe=${timeframe}`, {
-    method: 'GET',
-    headers: this.getHeaders()
-  });
-  return this.handleResponse(response);
-}
-
-async getMarketData() {
-  const response = await fetch(`${API_BASE_URL}/analytics/market`, {
-    method: 'GET',
-    headers: this.getHeaders()
-  });
-  return this.handleResponse(response);
-}
-
-// Real-time WebSocket connection helper
-connectWebSocket(userId) {
-  const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
-  const ws = new WebSocket(wsUrl);
-  
-  ws.onopen = () => {
-    console.log('✅ WebSocket connected');
-    // Authenticate
-    ws.send(JSON.stringify({
-      type: 'auth',
-      userId: userId
-    }));
+  // Real-time WebSocket connection helper
+  connectWebSocket(userId) {
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+    const ws = new WebSocket(wsUrl);
     
-    // Subscribe to channels
-    ws.send(JSON.stringify({
-      type: 'subscribe',
-      channels: ['market_stream', 'energy_stream', 'trading_stream']
-    }));
-  };
-  
-  return ws;
-}
-
-
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected');
+      // Authenticate
+      ws.send(JSON.stringify({
+        type: 'auth',
+        userId: userId
+      }));
+      // Subscribe to channels
+      ws.send(JSON.stringify({
+        type: 'subscribe',
+        channels: ['market_stream', 'energy_stream', 'trading_stream']
+      }));
+    };
+    
+    return ws;
+  }
 
   // Token management methods
   setAuthToken(token) {
@@ -502,6 +512,15 @@ connectWebSocket(userId) {
                  localStorage.getItem('authToken') ||
                  localStorage.getItem('accessToken');
     return !!this.token;
+  }
+
+  // Debug authentication
+  debugAuth() {
+    console.log('🔍 Auth Debug:');
+    console.log('Token exists:', !!this.token);
+    console.log('Token value:', this.token ? this.token.substring(0, 20) + '...' : 'null');
+    console.log('isAuthenticated:', this.isAuthenticated());
+    console.log('localStorage keys:', Object.keys(localStorage));
   }
 
   // API health check

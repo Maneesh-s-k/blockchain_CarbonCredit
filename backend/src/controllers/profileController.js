@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Device = require('../models/Device');
+const mongoose = require('mongoose');
+const EnergyListing = require('../models/EnergyListing');
 const Transaction = require('../models/Transaction');
 const WalletTransaction = require('../models/WalletTransaction');
 const { validationResult } = require('express-validator');
@@ -24,7 +26,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
@@ -41,7 +43,6 @@ const upload = multer({
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
-
     const user = await User.findById(userId)
       .select('-password -security.passwordResetToken -security.passwordResetExpires');
 
@@ -52,63 +53,76 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    // Get additional statistics
-    const [deviceStats, tradingStats, walletStats] = await Promise.all([
-      Device.aggregate([
-        { $match: { owner: new new mongoose.Types.ObjectId(userId), isActive: true } },
-        {
-          $group: {
-            _id: null,
-            totalDevices: { $sum: 1 },
-            totalCapacity: { $sum: '$capacity' },
-            totalEnergyProduced: { $sum: '$energyProduction.totalProduced' },
-            approvedDevices: {
-              $sum: { $cond: [{ $eq: ['$verification.status', 'approved'] }, 1, 0] }
+    // Get additional statistics with proper error handling
+    try {
+      const [deviceStats, tradingStats, walletStats] = await Promise.all([
+        // Device stats with fallback
+        Device.aggregate([
+          { $match: { owner: new mongoose.Types.ObjectId(userId), isActive: true } },
+          {
+            $group: {
+              _id: null,
+              totalDevices: { $sum: 1 },
+              totalCapacity: { $sum: '$capacity' },
+              totalEnergyProduced: { $sum: '$energyProduction.totalProduced' },
+              approvedDevices: {
+                $sum: { $cond: [{ $eq: ['$verification.status', 'approved'] }, 1, 0] }
+              }
             }
           }
-        }
-      ]),
-      Transaction.aggregate([
-        { $match: { $or: [{ buyer: new new mongoose.Types.ObjectId(userId) }, { seller: new new mongoose.Types.ObjectId(userId) }] } },
-        {
-          $group: {
-            _id: null,
-            totalTrades: { $sum: 1 },
-            totalVolume: { $sum: '$energy.amount' },
-            totalValue: { $sum: '$energy.totalPrice' }
+        ]).catch(() => []),
+
+        // Trading stats with fallback
+        Transaction.aggregate([
+          { $match: { $or: [{ buyer: new mongoose.Types.ObjectId(userId) }, { seller: new mongoose.Types.ObjectId(userId) }] } },
+          {
+            $group: {
+              _id: null,
+              totalTrades: { $sum: 1 },
+              totalVolume: { $sum: '$energy.amount' },
+              totalValue: { $sum: '$energy.totalPrice' }
+            }
           }
-        }
-      ]),
-      WalletTransaction.aggregate([
-        { $match: { user: new new mongoose.Types.ObjectId(userId) } },
-        {
-          $group: {
-            _id: '$type',
-            count: { $sum: 1 },
-            totalAmount: { $sum: '$amount' }
+        ]).catch(() => []),
+
+        // Wallet stats with fallback
+        WalletTransaction.aggregate([
+          { $match: { user: new mongoose.Types.ObjectId(userId) } },
+          {
+            $group: {
+              _id: '$type',
+              count: { $sum: 1 },
+              totalAmount: { $sum: '$amount' }
+            }
           }
+        ]).catch(() => [])
+      ]);
+
+      const profileData = {
+        ...user.toObject(),
+        statistics: {
+          ...user.statistics,
+          devices: deviceStats[0] || { totalDevices: 0, totalCapacity: 0, totalEnergyProduced: 0, approvedDevices: 0 },
+          trading: tradingStats[0] || { totalTrades: 0, totalVolume: 0, totalValue: 0 },
+          wallet: walletStats.reduce((acc, stat) => {
+            acc[stat._id] = { count: stat.count, totalAmount: stat.totalAmount };
+            return acc;
+          }, {})
         }
-      ])
-    ]);
+      };
 
-    const profileData = {
-      ...user.toObject(),
-      statistics: {
-        ...user.statistics,
-        devices: deviceStats[0] || { totalDevices: 0, totalCapacity: 0, totalEnergyProduced: 0, approvedDevices: 0 },
-        trading: tradingStats[0] || { totalTrades: 0, totalVolume: 0, totalValue: 0 },
-        wallet: walletStats.reduce((acc, stat) => {
-          acc[stat._id] = { count: stat.count, totalAmount: stat.totalAmount };
-          return acc;
-        }, {})
-      }
-    };
-
-    res.json({
-      success: true,
-      profile: profileData
-    });
-
+      res.json({
+        success: true,
+        profile: profileData
+      });
+    } catch (statsError) {
+      console.error('Error loading profile statistics:', statsError);
+      // Return basic profile without stats if aggregation fails
+      res.json({
+        success: true,
+        profile: user.toObject()
+      });
+    }
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({
@@ -140,7 +154,7 @@ exports.updateProfile = async (req, res) => {
     ];
 
     const updateData = {};
-    
+
     // Handle nested updates
     Object.keys(updates).forEach(key => {
       if (allowedUpdates.includes(key)) {
@@ -173,7 +187,6 @@ exports.updateProfile = async (req, res) => {
       message: 'Profile updated successfully',
       profile: user
     });
-
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({
@@ -214,15 +227,12 @@ exports.uploadAvatar = [
         message: 'Avatar uploaded successfully',
         avatar: avatarPath
       });
-
     } catch (error) {
       console.error('Upload avatar error:', error);
-      
       // Clean up uploaded file on error
       if (req.file) {
         await fs.unlink(req.file.path).catch(() => {});
       }
-
       res.status(500).json({
         success: false,
         message: 'Server error uploading avatar'
@@ -231,47 +241,101 @@ exports.uploadAvatar = [
   }
 ];
 
-// Get user dashboard data
+// Get user dashboard data - FIXED
 exports.getDashboardData = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [
-      user,
-      deviceStats,
-      recentTransactions,
-      activeListings,
-      walletTransactions
-    ] = await Promise.all([
-      User.findById(userId).select('wallet statistics'),
-      Device.getDeviceStats(userId),
-      Transaction.getUserTransactions(userId, 'both', {}).limit(5),
-      EnergyListing.find({ seller: userId, status: 'active' }).limit(3),
-      WalletTransaction.find({ user: userId }).sort({ createdAt: -1 }).limit(5)
-    ]);
+    // Get basic user data first
+    const user = await User.findById(userId).select('wallet statistics');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
-    const dashboardData = {
-      wallet: user.wallet,
-      statistics: {
-        devices: deviceStats,
-        trading: {
-          totalTrades: user.statistics.totalTrades,
-          totalEnergyTraded: user.statistics.totalEnergyTraded,
-          averageRating: user.statistics.averageRating
+    try {
+      // Try to get additional data with fallbacks
+      const [deviceStats, recentTransactions, activeListings, walletTransactions] = await Promise.all([
+        // Device stats with fallback
+        Device.aggregate([
+          { $match: { owner: new mongoose.Types.ObjectId(userId), isActive: true } },
+          {
+            $group: {
+              _id: null,
+              totalDevices: { $sum: 1 },
+              totalCapacity: { $sum: '$capacity' },
+              totalEnergyProduced: { $sum: '$energyProduction.totalProduced' }
+            }
+          }
+        ]).catch(() => [{ totalDevices: 0, totalCapacity: 0, totalEnergyProduced: 0 }]),
+
+        // Recent transactions with fallback
+        Transaction.find({
+          $or: [{ buyer: userId }, { seller: userId }]
+        })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .catch(() => []),
+
+        // Active listings with fallback
+        EnergyListing.find({ seller: userId, status: 'active' })
+        .limit(3)
+        .catch(() => []),
+
+        // Wallet transactions with fallback
+        WalletTransaction.find({ user: userId })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .catch(() => [])
+      ]);
+
+      const dashboardData = {
+        wallet: user.wallet,
+        statistics: {
+          devices: deviceStats[0] || { totalDevices: 0, totalCapacity: 0, totalEnergyProduced: 0 },
+          trading: {
+            totalTrades: user.statistics.totalTrades || 0,
+            totalEnergyTraded: user.statistics.totalEnergyTraded || 0,
+            averageRating: user.statistics.averageRating || 0
+          }
+        },
+        recentActivity: {
+          transactions: recentTransactions,
+          walletTransactions: walletTransactions,
+          activeListings: activeListings
         }
-      },
-      recentActivity: {
-        transactions: recentTransactions,
-        walletTransactions: walletTransactions,
-        activeListings: activeListings
-      }
-    };
+      };
 
-    res.json({
-      success: true,
-      dashboard: dashboardData
-    });
-
+      res.json({
+        success: true,
+        dashboard: dashboardData
+      });
+    } catch (dataError) {
+      console.error('Error loading dashboard data:', dataError);
+      // Return basic dashboard data if detailed data fails
+      res.json({
+        success: true,
+        dashboard: {
+          wallet: user.wallet,
+          statistics: {
+            devices: { totalDevices: 0, totalCapacity: 0, totalEnergyProduced: 0 },
+            trading: {
+              totalTrades: user.statistics.totalTrades || 0,
+              totalEnergyTraded: user.statistics.totalEnergyTraded || 0,
+              averageRating: user.statistics.averageRating || 0
+            }
+          },
+          recentActivity: {
+            transactions: [],
+            walletTransactions: [],
+            activeListings: []
+          }
+        }
+      });
+    }
   } catch (error) {
     console.error('Get dashboard data error:', error);
     res.status(500).json({
@@ -298,7 +362,6 @@ exports.updateNotificationPreferences = async (req, res) => {
       message: 'Notification preferences updated',
       notifications: user.preferences.notifications
     });
-
   } catch (error) {
     console.error('Update notification preferences error:', error);
     res.status(500).json({
@@ -325,7 +388,6 @@ exports.updatePrivacySettings = async (req, res) => {
       message: 'Privacy settings updated',
       privacy: user.preferences.privacy
     });
-
   } catch (error) {
     console.error('Update privacy settings error:', error);
     res.status(500).json({

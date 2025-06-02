@@ -313,7 +313,7 @@ app.use('/api/devices', authenticate, deviceRoutes);
 app.use('/api/trading', authenticate, tradingRoutes);
 app.use('/api/energy', authenticate, energyRoutes);
 app.use('/api/payments', authenticate, paymentRoutes);
-app.use('/api/users', authenticate, userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/profile', authenticate, profileRoutes);
 app.use('/api/blockchain', authenticate, blockchainRoutes);
 

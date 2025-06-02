@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const profileController = require('../controllers/profileController');
+const { authenticate } = require('../middleware/auth');
 
 // Validation middleware
 const validateProfileUpdate = [
@@ -15,12 +16,12 @@ const validateProfileUpdate = [
   body('location.country').optional().isLength({ max: 100 }).withMessage('Country cannot exceed 100 characters')
 ];
 
-// Profile routes
-router.get('/', profileController.getProfile);
-router.put('/', validateProfileUpdate, profileController.updateProfile);
-router.post('/avatar', profileController.uploadAvatar);
-router.get('/dashboard', profileController.getDashboardData);
-router.put('/notifications', profileController.updateNotificationPreferences);
-router.put('/privacy', profileController.updatePrivacySettings);
+// Profile routes - ALL ROUTES NOW REQUIRE AUTHENTICATION
+router.get('/', authenticate, profileController.getProfile);
+router.put('/', authenticate, validateProfileUpdate, profileController.updateProfile);
+router.post('/avatar', authenticate, profileController.uploadAvatar);
+router.get('/dashboard', authenticate, profileController.getDashboardData); // FIXED: Added authentication
+router.put('/notifications', authenticate, profileController.updateNotificationPreferences);
+router.put('/privacy', authenticate, profileController.updatePrivacySettings);
 
 module.exports = router;
