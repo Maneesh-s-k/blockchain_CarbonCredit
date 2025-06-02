@@ -1,4 +1,5 @@
 /* Top Options Bar Component */
+
 .main-dashboard {
   margin-left: var(--sidebar-width-collapsed);
   flex: 1;
@@ -8,18 +9,25 @@
 }
 
 .top-options-container {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: var(--sidebar-width-collapsed);
+  right: 0;
   z-index: 100;
-  padding: 16px 24px;
+  padding: 16px 24px; /* SLIGHTLY INCREASED from 14px 22px */
   background: rgba(40, 40, 40, 0.8);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
+  border-radius: 0 0 24px 24px; /* SLIGHTLY INCREASED from 22px */
+  transition: all 0.3s ease;
+  height: 60px; /* SLIGHTLY INCREASED from 56px */
 }
 
 .top-options-container.compact {
-  padding: 8px 16px;
+  padding: 10px 18px; /* SLIGHTLY INCREASED from 8px 16px */
   margin-bottom: 8px;
+  border-radius: 0 0 20px 20px; /* SLIGHTLY INCREASED from 18px */
+  height: 50px; /* SLIGHTLY INCREASED from 46px */
 }
 
 .top-options-bar {
@@ -29,6 +37,7 @@
   max-width: 1400px;
   margin: 0 auto;
   gap: 12px;
+  height: 100%;
 }
 
 .action-buttons {
@@ -37,10 +46,50 @@
   align-items: center;
 }
 
+.action-buttons .btn {
+  padding: 7px 12px; /* REDUCED from 8px 14px to match smaller topbar */
+  border-radius: 8px; /* REDUCED from 10px */
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  color: var(--circuit-primary);
+  font-size: 12px; /* REDUCED from 13px */
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px; /* REDUCED from 6px */
+  height: 32px; /* REDUCED from 34px */
+}
+
+.action-buttons .btn:hover {
+  background: rgba(0, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 255, 255, 0.2); /* REDUCED shadow */
+}
+
+.action-buttons .btn.primary {
+  background: linear-gradient(135deg, var(--circuit-primary), var(--circuit-secondary));
+  color: #000000;
+  border-color: transparent;
+}
+
+.action-buttons .btn.danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+
+.action-buttons .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .user-menu {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px; /* KEPT same */
 }
 
 .user-menu.compact {
@@ -49,11 +98,94 @@
 
 .user-name {
   color: #e2e8f0;
-  font-size: 14px;
+  font-size: 13px; /* REDUCED from 14px */
   font-weight: 500;
   margin-right: 8px;
 }
 
 .user-menu.compact .user-name {
-  font-size: 12px;
+  font-size: 11px; /* REDUCED from 12px */
+}
+
+.user-menu .btn {
+  padding: 6px 10px; /* REDUCED from original */
+  border-radius: 6px; /* REDUCED from original */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  font-size: 12px; /* REDUCED from 13px */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px; /* REDUCED from 32px */
+}
+
+.user-menu .btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.user-menu .btn.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+
+.user-menu .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .top-options-container {
+    left: 0;
+    padding: 14px 20px; /* SLIGHTLY INCREASED from 12px 18px */
+    border-radius: 0 0 20px 20px; /* SLIGHTLY INCREASED from 18px */
+    height: 54px; /* SLIGHTLY INCREASED from 50px */
+  }
+}
+
+@media (max-width: 768px) {
+  .top-options-container {
+    padding: 12px 16px; /* SLIGHTLY INCREASED from 10px 14px */
+    border-radius: 0 0 18px 18px; /* SLIGHTLY INCREASED from 16px */
+    height: 48px; /* SLIGHTLY INCREASED from 44px */
+  }
+  
+  .action-buttons {
+    gap: 6px; /* KEPT same */
+  }
+  
+  .action-buttons .btn {
+    padding: 5px 8px; /* REDUCED from 6px 10px */
+    font-size: 11px; /* REDUCED from 12px */
+    height: 28px; /* REDUCED from 30px */
+  }
+  
+  .user-menu {
+    gap: 8px;
+  }
+  
+  .user-name {
+    font-size: 12px; /* KEPT same */
+  }
+}
+
+/* Ensure content doesn't overlap with fixed top bar */
+.main-content-wrapper {
+  padding-top: 70px; /* SLIGHTLY INCREASED from 66px */
 }

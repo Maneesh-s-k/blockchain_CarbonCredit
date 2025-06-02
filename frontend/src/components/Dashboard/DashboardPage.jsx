@@ -1,10 +1,10 @@
-// components/Dashboard/DashboardPage.jsx - FINAL WORKING VERSION
+// components/Dashboard/DashboardPage.jsx - COMPLETE UPDATED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import WalletConnect from '../Wallet/WalletConnect';
 import { blockchainService } from '../../services/blockchainService';
 import { apiService } from '../../services/apiService';
 import ErrorBoundary from '../Shared/ErrorBoundary';
+import WalletConnect from '../Wallet/WalletConnect'; // Floating wallet
 import { 
   FiZap, FiDollarSign, FiRefreshCw, FiTrendingUp, FiGrid, 
   FiSettings, FiBarChart2, FiShoppingCart, FiPlus, FiEye, 
@@ -15,9 +15,8 @@ import {
 export default function DashboardPage({ setIsLoading }) {
   const navigate = useNavigate();
   
-  // SIMPLIFIED STATE MANAGEMENT - ONLY WORKING ENDPOINTS
+  // REAL DATA STATE
   const [dashboardState, setDashboardState] = useState({
-    // Real blockchain metrics
     blockchain: {
       isConnected: false,
       address: '',
@@ -26,22 +25,20 @@ export default function DashboardPage({ setIsLoading }) {
       totalTokens: 0,
       network: null
     },
-    // Fallback metrics (since APIs may not exist)
     metrics: {
-      totalEnergyProduced: 2450,
-      totalRevenue: 8420,
-      activeTrades: 12,
-      carbonCredits: 18,
-      devicesConnected: 4,
-      monthlyGrowth: 23.5
+      totalEnergyProduced: 0,
+      totalRevenue: 0,
+      activeTrades: 0,
+      carbonCredits: 0,
+      devicesConnected: 0,
+      monthlyGrowth: 0
     },
-    // Loading states
+    activities: [],
     loading: {
       main: true,
       blockchain: false,
       refresh: false
     },
-    // Real-time connection
     isRealTimeConnected: false,
     lastUpdated: null,
     error: null
@@ -50,10 +47,10 @@ export default function DashboardPage({ setIsLoading }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
 
   useEffect(() => {
-    initializeDashboard();
+    initializeRealDashboard();
   }, []);
 
-  const initializeDashboard = async () => {
+  const initializeRealDashboard = async () => {
     try {
       setDashboardState(prev => ({
         ...prev,
@@ -61,16 +58,32 @@ export default function DashboardPage({ setIsLoading }) {
         error: null
       }));
 
-      // ONLY LOAD BLOCKCHAIN DATA - SKIP BROKEN API CALLS
-      const blockchainData = await loadBlockchainDataSafely();
-      
-      // TRY TO LOAD SOME BASIC DATA IF ENDPOINTS EXIST
-      const enhancedMetrics = await loadBasicDataSafely();
+      const [
+        blockchainData,
+        energyData,
+        tradingData,
+        devicesData,
+        activitiesData
+      ] = await Promise.all([
+        loadRealBlockchainData(),
+        loadRealEnergyData(),
+        loadRealTradingData(),
+        loadRealDevicesData(),
+        loadRealActivitiesData()
+      ]);
 
       setDashboardState(prev => ({
         ...prev,
         blockchain: blockchainData,
-        metrics: { ...prev.metrics, ...enhancedMetrics },
+        metrics: {
+          totalEnergyProduced: energyData.totalProduced,
+          totalRevenue: tradingData.totalRevenue,
+          activeTrades: tradingData.activeTrades,
+          carbonCredits: blockchainData.totalTokens,
+          devicesConnected: devicesData.connectedDevices,
+          monthlyGrowth: tradingData.growthRate
+        },
+        activities: activitiesData,
         loading: { ...prev.loading, main: false },
         lastUpdated: new Date()
       }));
@@ -80,8 +93,8 @@ export default function DashboardPage({ setIsLoading }) {
       setDashboardState(prev => ({
         ...prev,
         error: {
-          message: 'Some features unavailable',
-          details: 'Using offline mode with sample data',
+          message: 'Failed to load dashboard data',
+          details: error.message,
           canRetry: true
         },
         loading: { ...prev.loading, main: false }
@@ -89,23 +102,20 @@ export default function DashboardPage({ setIsLoading }) {
     }
   };
 
-  const loadBlockchainDataSafely = async () => {
+  const loadRealBlockchainData = async () => {
     try {
-      // Check if MetaMask is available
       if (!window.ethereum) {
-        return { isConnected: false };
+        return { isConnected: false, totalTokens: 0 };
       }
 
-      // Check if already connected
       const accounts = await window.ethereum.request({ method: 'eth_accounts' });
       
       if (accounts.length === 0) {
-        return { isConnected: false };
+        return { isConnected: false, totalTokens: 0 };
       }
 
       const address = accounts[0];
 
-      // Use ONLY the methods that exist in your blockchainService
       const [
         ethBalance,
         carbonBalance,
@@ -127,46 +137,155 @@ export default function DashboardPage({ setIsLoading }) {
 
     } catch (error) {
       console.error('Blockchain data loading error:', error);
-      return { isConnected: false };
+      return { isConnected: false, totalTokens: 0 };
     }
   };
 
-  const loadBasicDataSafely = async () => {
-    const enhancedMetrics = {};
-    
+  const loadRealEnergyData = async () => {
     try {
-      // Try to get user devices (this endpoint might exist)
-      const devicesResponse = await apiService.getUserDevices();
-      if (devicesResponse.success) {
-        enhancedMetrics.devicesConnected = devicesResponse.devices?.length || 4;
-      }
-    } catch (error) {
-      console.log('Devices endpoint not available');
-    }
+      const response = await apiService.getUserDevices();
+      
+      if (response?.success && response.devices) {
+        const totalProduced = response.devices.reduce((sum, device) => {
+          return sum + (device.energyProduction?.totalProduced || 0);
+        }, 0);
 
-    try {
-      // Try to get trading analytics (this endpoint might exist)
-      const tradingResponse = await apiService.getTradingAnalytics?.(selectedTimeframe);
-      if (tradingResponse?.success) {
-        enhancedMetrics.activeTrades = tradingResponse.statistics?.activeListings || 12;
-        enhancedMetrics.totalRevenue = tradingResponse.statistics?.totalValue || 8420;
+        return {
+          totalProduced: totalProduced,
+          connectedDevices: response.devices.length
+        };
       }
-    } catch (error) {
-      console.log('Trading analytics endpoint not available');
-    }
 
+      return { totalProduced: 0, connectedDevices: 0 };
+    } catch (error) {
+      console.error('Energy data loading error:', error);
+      return { totalProduced: 0, connectedDevices: 0 };
+    }
+  };
+
+  const loadRealTradingData = async () => {
     try {
-      // Try to get user transactions
+      const response = await apiService.getTradingAnalytics?.(selectedTimeframe);
+      
+      if (response?.success && response.statistics) {
+        return {
+          totalRevenue: response.statistics.totalValue || 0,
+          activeTrades: response.statistics.activeListings || 0,
+          growthRate: response.statistics.growthRate || 0
+        };
+      }
+
+      const transactionsResponse = await apiService.getUserTransactions?.({ limit: 100 });
+      
+      if (transactionsResponse?.success && transactionsResponse.transactions) {
+        const completedTransactions = transactionsResponse.transactions.filter(tx => tx.status === 'completed');
+        const totalRevenue = completedTransactions.reduce((sum, tx) => {
+          return sum + (tx.energy?.totalPrice || tx.amount || 0);
+        }, 0);
+
+        return {
+          totalRevenue: totalRevenue,
+          activeTrades: transactionsResponse.transactions.filter(tx => tx.status === 'pending').length,
+          growthRate: 0
+        };
+      }
+
+      return { totalRevenue: 0, activeTrades: 0, growthRate: 0 };
+    } catch (error) {
+      console.error('Trading data loading error:', error);
+      return { totalRevenue: 0, activeTrades: 0, growthRate: 0 };
+    }
+  };
+
+  const loadRealDevicesData = async () => {
+    try {
+      const response = await apiService.getUserDevices();
+      
+      if (response?.success && response.devices) {
+        const approvedDevices = response.devices.filter(device => 
+          device.verification?.status === 'approved'
+        );
+
+        return {
+          connectedDevices: approvedDevices.length,
+          totalDevices: response.devices.length
+        };
+      }
+
+      return { connectedDevices: 0, totalDevices: 0 };
+    } catch (error) {
+      console.error('Devices data loading error:', error);
+      return { connectedDevices: 0, totalDevices: 0 };
+    }
+  };
+
+  const loadRealActivitiesData = async () => {
+    try {
       const transactionsResponse = await apiService.getUserTransactions?.({ limit: 5 });
-      if (transactionsResponse?.success) {
-        const completedTransactions = transactionsResponse.transactions?.filter(tx => tx.status === 'completed') || [];
-        enhancedMetrics.totalRevenue = completedTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 8420;
-      }
-    } catch (error) {
-      console.log('Transactions endpoint not available');
-    }
+      const activities = [];
 
-    return enhancedMetrics;
+      if (transactionsResponse?.success && transactionsResponse.transactions) {
+        transactionsResponse.transactions.forEach(tx => {
+          activities.push({
+            id: tx._id,
+            type: tx.type || (tx.seller ? 'energy_sale' : 'energy_purchase'),
+            title: tx.type === 'sale' || tx.seller ? 'Energy Sold' : 'Energy Purchased',
+            description: `${tx.energy?.amount || tx.amount || 0} kWh`,
+            amount: tx.energy?.totalPrice ? `$${tx.energy.totalPrice.toFixed(2)}` : '',
+            timestamp: tx.createdAt,
+            status: tx.status
+          });
+        });
+      }
+
+      try {
+        const devicesResponse = await apiService.getUserDevices();
+        if (devicesResponse?.success && devicesResponse.devices) {
+          devicesResponse.devices.slice(0, 2).forEach(device => {
+            activities.push({
+              id: device._id,
+              type: 'device_activity',
+              title: 'Device Online',
+              description: `${device.deviceName} producing energy`,
+              amount: '',
+              timestamp: device.updatedAt || device.createdAt,
+              status: device.verification?.status || 'active'
+            });
+          });
+        }
+      } catch (error) {
+        console.log('Device activities not available');
+      }
+
+      if (dashboardState.blockchain.isConnected) {
+        try {
+          const userTokens = await blockchainService.getUserTokens?.(dashboardState.blockchain.address);
+          if (userTokens && userTokens.length > 0) {
+            userTokens.slice(0, 2).forEach(token => {
+              activities.push({
+                id: token.tokenId,
+                type: 'carbon_credit',
+                title: 'Carbon Credit Earned',
+                description: `NFT Token #${token.tokenId}`,
+                amount: '+1 Credit',
+                timestamp: new Date(),
+                status: 'completed'
+              });
+            });
+          }
+        } catch (error) {
+          console.log('Carbon credit activities not available');
+        }
+      }
+
+      return activities
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 5);
+
+    } catch (error) {
+      console.error('Activities data loading error:', error);
+      return [];
+    }
   };
 
   const handleQuickAction = (action) => {
@@ -174,13 +293,12 @@ export default function DashboardPage({ setIsLoading }) {
     
     const routes = {
       'register-device': '/register-device',
-      'sell-energy': '/energy-exchange?tab=sell',
-      'buy-credits': '/energy-exchange?tab=buy',
+      'sell-energy': '/energy-exchange?tab=my-listings',
+      'buy-credits': '/energy-exchange?tab=marketplace',
       'view-devices': '/devices',
       'view-history': '/history',
       'manage-payments': '/payments',
       'view-analytics': '/analytics',
-      'mint-credits': '/carbon-credits/mint',
       'settings': '/settings'
     };
 
@@ -212,7 +330,7 @@ export default function DashboardPage({ setIsLoading }) {
       loading: { ...prev.loading, refresh: true }
     }));
 
-    await initializeDashboard();
+    await initializeRealDashboard();
 
     setDashboardState(prev => ({
       ...prev,
@@ -225,6 +343,38 @@ export default function DashboardPage({ setIsLoading }) {
       ...prev,
       blockchain: { ...prev.blockchain, ...walletData }
     }));
+    
+    loadRealBlockchainData().then(blockchainData => {
+      setDashboardState(prev => ({
+        ...prev,
+        blockchain: blockchainData,
+        metrics: {
+          ...prev.metrics,
+          carbonCredits: blockchainData.totalTokens
+        }
+      }));
+    });
+  };
+
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now - past;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  };
+
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'energy_sale': return FiZap;
+      case 'energy_purchase': return FiShoppingCart;
+      case 'carbon_credit': return FiShield;
+      case 'device_activity': return FiSettings;
+      default: return FiActivity;
+    }
   };
 
   if (dashboardState.loading.main) {
@@ -232,8 +382,8 @@ export default function DashboardPage({ setIsLoading }) {
       <div className="dashboard-content">
         <div className="dashboard-loading-state">
           <FiRefreshCw className="spinning" />
-          <h3>Loading Dashboard...</h3>
-          <p>Connecting to blockchain and loading available data</p>
+          <h3>Loading Real Dashboard Data...</h3>
+          <p>Fetching your actual energy data and blockchain information</p>
         </div>
       </div>
     );
@@ -242,16 +392,22 @@ export default function DashboardPage({ setIsLoading }) {
   return (
     <ErrorBoundary>
       <div className="dashboard-content">
-        {/* HEADER */}
+        {/* FLOATING WALLET - POSITIONED GLOBALLY */}
+        <WalletConnect 
+          blockchainData={dashboardState.blockchain}
+          onWalletUpdate={handleWalletUpdate}
+          onRefresh={refreshAllData}
+        />
+
+        {/* HEADER WITHOUT WALLET BUTTON */}
         <div className="dashboard-header-section">
           <div className="header-main">
             <div className="header-text">
               <h1 className="dashboard-title">Energy Trading Dashboard</h1>
               <p className="dashboard-subtitle">
-                Renewable energy trading platform with blockchain-powered carbon credits
+                Real-time renewable energy trading with blockchain-powered carbon credits
               </p>
               
-              {/* CONNECTION STATUS */}
               <div className="connection-status">
                 <div className={`status-indicator ${dashboardState.blockchain.isConnected ? 'online' : 'offline'}`}>
                   {dashboardState.blockchain.isConnected ? <FiShield /> : <FiWifiOff />}
@@ -266,6 +422,7 @@ export default function DashboardPage({ setIsLoading }) {
               </div>
             </div>
             
+            {/* HEADER ACTIONS WITHOUT WALLET */}
             <div className="header-actions">
               <button 
                 className="header-btn secondary"
@@ -304,7 +461,7 @@ export default function DashboardPage({ setIsLoading }) {
               <p>{dashboardState.error.details}</p>
             </div>
             {dashboardState.error.canRetry && (
-              <button onClick={initializeDashboard} className="error-retry-btn">
+              <button onClick={initializeRealDashboard} className="error-retry-btn">
                 <FiRefreshCw />
                 Retry
               </button>
@@ -312,12 +469,12 @@ export default function DashboardPage({ setIsLoading }) {
           </div>
         )}
 
-        {/* METRICS GRID */}
+        {/* MAIN LAYOUT */}
         <div className="dashboard-main-layout">
           <div className="dashboard-primary-column">
+            {/* METRICS GRID */}
             <div className="metrics-section">
               <div className="metrics-grid">
-                {/* ENERGY PRODUCTION */}
                 <div 
                   className="metric-card energy clickable" 
                   onClick={() => handleMetricClick('energy')}
@@ -327,17 +484,16 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="metric-content">
                     <div className="metric-value">
-                      {dashboardState.metrics.totalEnergyProduced?.toLocaleString()}
+                      {dashboardState.metrics.totalEnergyProduced?.toLocaleString() || '0'}
                     </div>
                     <div className="metric-label">kWh Produced</div>
                     <div className="metric-trend positive">
                       <FiTrendingUp />
-                      +{dashboardState.metrics.monthlyGrowth}% this month
+                      Real production data
                     </div>
                   </div>
                 </div>
 
-                {/* TOTAL REVENUE */}
                 <div 
                   className="metric-card revenue clickable" 
                   onClick={() => handleMetricClick('revenue')}
@@ -347,17 +503,16 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="metric-content">
                     <div className="metric-value">
-                      ${dashboardState.metrics.totalRevenue?.toLocaleString()}
+                      ${dashboardState.metrics.totalRevenue?.toLocaleString() || '0'}
                     </div>
                     <div className="metric-label">Total Revenue</div>
                     <div className="metric-trend positive">
                       <FiTrendingUp />
-                      Trading income
+                      From actual trades
                     </div>
                   </div>
                 </div>
 
-                {/* ACTIVE TRADES */}
                 <div 
                   className="metric-card trades clickable" 
                   onClick={() => handleMetricClick('trades')}
@@ -367,17 +522,16 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="metric-content">
                     <div className="metric-value">
-                      {dashboardState.metrics.activeTrades}
+                      {dashboardState.metrics.activeTrades || 0}
                     </div>
                     <div className="metric-label">Active Trades</div>
                     <div className="metric-trend positive">
                       <FiTrendingUp />
-                      Marketplace listings
+                      Live marketplace
                     </div>
                   </div>
                 </div>
 
-                {/* CARBON CREDITS */}
                 <div 
                   className="metric-card credits clickable" 
                   onClick={() => handleMetricClick('credits')}
@@ -387,17 +541,16 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="metric-content">
                     <div className="metric-value">
-                      {dashboardState.blockchain.totalTokens || dashboardState.metrics.carbonCredits}
+                      {dashboardState.metrics.carbonCredits || 0}
                     </div>
                     <div className="metric-label">Carbon Credits</div>
                     <div className="metric-trend positive">
                       <FiShield />
-                      {dashboardState.blockchain.isConnected ? 'Blockchain NFTs' : 'Available credits'}
+                      Blockchain NFTs
                     </div>
                   </div>
                 </div>
 
-                {/* CONNECTED DEVICES */}
                 <div 
                   className="metric-card devices clickable" 
                   onClick={() => handleMetricClick('energy')}
@@ -407,11 +560,11 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="metric-content">
                     <div className="metric-value">
-                      {dashboardState.metrics.devicesConnected}
+                      {dashboardState.metrics.devicesConnected || 0}
                     </div>
                     <div className="metric-label">Connected Devices</div>
                     <div className="metric-trend neutral">
-                      87.5% efficiency
+                      Verified devices
                     </div>
                   </div>
                 </div>
@@ -525,18 +678,9 @@ export default function DashboardPage({ setIsLoading }) {
             </div>
           </div>
 
-          {/* SIDEBAR */}
+          {/* SIDEBAR WITHOUT WALLET */}
           <div className="dashboard-secondary-column">
-            {/* BLOCKCHAIN WALLET */}
-            <div className="wallet-section">
-              <WalletConnect 
-                blockchainData={dashboardState.blockchain}
-                onWalletUpdate={handleWalletUpdate}
-                onRefresh={refreshAllData}
-              />
-            </div>
-
-            {/* RECENT ACTIVITY */}
+            {/* ACTIVITY FEED */}
             <div className="activity-section">
               <div className="section-header">
                 <h3>Recent Activity</h3>
@@ -549,75 +693,36 @@ export default function DashboardPage({ setIsLoading }) {
               </div>
               
               <div className="activity-feed">
-                <div className="activity-item">
-                  <div className="activity-icon">
-                    <FiZap />
-                  </div>
-                  <div className="activity-content">
-                    <h4 className="activity-title">Energy Sold</h4>
-                    <p className="activity-description">180 kWh to grid</p>
-                    <span className="activity-time">2h ago</span>
-                  </div>
-                  <div className="activity-amount">
-                    $54.00
-                  </div>
-                </div>
-
-                <div className="activity-item">
-                  <div className="activity-icon">
-                    <FiShield />
-                  </div>
-                  <div className="activity-content">
-                    <h4 className="activity-title">Carbon Credit Earned</h4>
-                    <p className="activity-description">3 credits from solar</p>
-                    <span className="activity-time">5h ago</span>
-                  </div>
-                  <div className="activity-amount">
-                    +3 Credits
-                  </div>
-                </div>
-
-                <div className="activity-item">
-                  <div className="activity-icon">
+                {dashboardState.activities.length > 0 ? (
+                  dashboardState.activities.map((activity) => {
+                    const IconComponent = getActivityIcon(activity.type);
+                    return (
+                      <div key={activity.id} className="activity-item">
+                        <div className="activity-icon">
+                          <IconComponent />
+                        </div>
+                        <div className="activity-content">
+                          <h4 className="activity-title">{activity.title}</h4>
+                          <p className="activity-description">{activity.description}</p>
+                          <span className="activity-time">
+                            {formatTimeAgo(activity.timestamp)}
+                          </span>
+                        </div>
+                        {activity.amount && (
+                          <div className="activity-amount">
+                            {activity.amount}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="empty-activities">
                     <FiActivity />
+                    <p>No recent activity</p>
+                    <span>Your transactions will appear here</span>
                   </div>
-                  <div className="activity-content">
-                    <h4 className="activity-title">Device Connected</h4>
-                    <p className="activity-description">Solar Panel #4 online</p>
-                    <span className="activity-time">1d ago</span>
-                  </div>
-                  <div className="activity-amount">
-                    <FiEye />
-                  </div>
-                </div>
-
-                <div className="activity-item">
-                  <div className="activity-icon">
-                    <FiDollarSign />
-                  </div>
-                  <div className="activity-content">
-                    <h4 className="activity-title">Payment Received</h4>
-                    <p className="activity-description">Weekly energy payment</p>
-                    <span className="activity-time">2d ago</span>
-                  </div>
-                  <div className="activity-amount">
-                    $420.00
-                  </div>
-                </div>
-
-                <div className="activity-item">
-                  <div className="activity-icon">
-                    <FiTrendingUp />
-                  </div>
-                  <div className="activity-content">
-                    <h4 className="activity-title">Carbon Credits Traded</h4>
-                    <p className="activity-description">8 credits sold</p>
-                    <span className="activity-time">3d ago</span>
-                  </div>
-                  <div className="activity-amount">
-                    $240.00
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -625,7 +730,7 @@ export default function DashboardPage({ setIsLoading }) {
             <div className="performance-section">
               <div className="section-header">
                 <h3>Performance Summary</h3>
-                <span className="period-badge">This Month</span>
+                <span className="period-badge">Real Data</span>
               </div>
               
               <div className="performance-metrics">
@@ -635,10 +740,10 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="performance-content">
                     <span className="performance-value">
-                      {dashboardState.metrics.totalEnergyProduced?.toLocaleString()} kWh
+                      {dashboardState.metrics.totalEnergyProduced?.toLocaleString() || '0'} kWh
                     </span>
                     <span className="performance-label">Energy Generated</span>
-                    <span className="performance-change positive">+{dashboardState.metrics.monthlyGrowth}%</span>
+                    <span className="performance-change positive">Live Data</span>
                   </div>
                 </div>
 
@@ -648,10 +753,10 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="performance-content">
                     <span className="performance-value">
-                      ${dashboardState.metrics.totalRevenue?.toLocaleString()}
+                      ${dashboardState.metrics.totalRevenue?.toLocaleString() || '0'}
                     </span>
                     <span className="performance-label">Revenue Earned</span>
-                    <span className="performance-change positive">+15.2%</span>
+                    <span className="performance-change positive">From Trades</span>
                   </div>
                 </div>
 
@@ -661,10 +766,10 @@ export default function DashboardPage({ setIsLoading }) {
                   </div>
                   <div className="performance-content">
                     <span className="performance-value">
-                      {dashboardState.blockchain.totalTokens || dashboardState.metrics.carbonCredits} Credits
+                      {dashboardState.metrics.carbonCredits || 0} Credits
                     </span>
-                    <span className="performance-label">Carbon Offset</span>
-                    <span className="performance-change positive">+6 earned</span>
+                    <span className="performance-label">Carbon NFTs</span>
+                    <span className="performance-change positive">Blockchain</span>
                   </div>
                 </div>
               </div>
