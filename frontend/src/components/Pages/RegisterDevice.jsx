@@ -1,21 +1,12 @@
 import React, { useState } from 'react';
+import { ethers } from 'ethers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/apiService';
 import { blockchainService } from '../../services/blockchainService';
 import {
-  FiZap,
-  FiMapPin,
-  FiInfo,
-  FiUpload,
-  FiCheck,
-  FiAlertTriangle,
-  FiSun,
-  FiWind,
-  FiDroplet,
-  FiLoader,
-  FiFileText,
-  FiShield
+  FiZap, FiMapPin, FiInfo, FiUpload, FiCheck, FiAlertTriangle,
+  FiSun, FiWind, FiDroplet, FiLoader, FiFileText
 } from 'react-icons/fi';
 
 export default function RegisterDevice() {
@@ -53,7 +44,6 @@ export default function RegisterDevice() {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear validation error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -62,20 +52,16 @@ export default function RegisterDevice() {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // Validate file
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 10 * 1024 * 1024;
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-      
       if (file.size > maxSize) {
         setMessage({ type: 'error', text: 'File size must be less than 10MB' });
         return;
       }
-      
       if (!allowedTypes.includes(file.type)) {
         setMessage({ type: 'error', text: 'Only PDF and image files are allowed' });
         return;
       }
-      
       setFormData(prev => ({ ...prev, certificationFile: file }));
       setMessage({ type: '', text: '' });
     }
@@ -95,7 +81,6 @@ export default function RegisterDevice() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       const fakeEvent = { target: { files: [file] } };
@@ -105,171 +90,132 @@ export default function RegisterDevice() {
 
   const validateForm = () => {
     const errors = {};
-    
     if (!formData.deviceName.trim()) {
       errors.deviceName = 'Device name is required';
     } else if (formData.deviceName.length > 100) {
       errors.deviceName = 'Device name cannot exceed 100 characters';
     }
-    
     if (!formData.capacity || parseFloat(formData.capacity) < 0.1) {
       errors.capacity = 'Capacity must be at least 0.1 kW';
     } else if (parseFloat(formData.capacity) > 10000) {
       errors.capacity = 'Capacity cannot exceed 10,000 kW';
     }
-    
     if (!formData.location.trim()) {
       errors.location = 'Location is required';
     } else if (formData.location.length > 200) {
       errors.location = 'Location cannot exceed 200 characters';
     }
-    
     if (!formData.serialNumber.trim()) {
       errors.serialNumber = 'Serial number is required';
     }
-    
     if (!formData.manufacturer.trim()) {
       errors.manufacturer = 'Manufacturer is required';
     }
-    
     if (!formData.installationDate) {
       errors.installationDate = 'Installation date is required';
     }
-    
     if (formData.description && formData.description.length > 500) {
       errors.description = 'Description cannot exceed 500 characters';
     }
-    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const generateMockProof = () => {
-    // Generate mock ZK-SNARK proof for development
-    return {
-      a: [
-        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-        "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
+  const generateMockProof = (deviceData) => ({
+    a: [
+      ethers.BigNumber.from('0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'),
+      ethers.BigNumber.from('0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321')
+    ],
+    b: [
+      [
+        ethers.BigNumber.from('0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'),
+        ethers.BigNumber.from('0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba')
       ],
-      b: [
-        [
-          "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-          "0x0987654321fedcba0987654321fedcba0987654321fedcba0987654321fedcba"
-        ],
-        [
-          "0x1111111111111111111111111111111111111111111111111111111111111111",
-          "0x2222222222222222222222222222222222222222222222222222222222222222"
-        ]
-      ],
-      c: [
-        "0x3333333333333333333333333333333333333333333333333333333333333333",
-        "0x4444444444444444444444444444444444444444444444444444444444444444"
-      ],
-      input: [
-        "0x5555555555555555555555555555555555555555555555555555555555555555"
+      [
+        ethers.BigNumber.from('0x1111111111111111111111111111111111111111111111111111111111111111'),
+        ethers.BigNumber.from('0x2222222222222222222222222222222222222222222222222222222222222222')
       ]
-    };
-  };
-
-  const generateProjectHash = () => {
-    const dataString = JSON.stringify({
-      deviceName: formData.deviceName,
-      serialNumber: formData.serialNumber,
-      location: formData.location,
-      timestamp: Date.now()
-    });
-    
-    let hash = 0;
-    for (let i = 0; i < dataString.length; i++) {
-      const char = dataString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    
-    return `0x${Math.abs(hash).toString(16).padStart(64, '0')}`;
-  };
+    ],
+    c: [
+      ethers.BigNumber.from('0x3333333333333333333333333333333333333333333333333333333333333333'),
+      ethers.BigNumber.from('0x4444444444444444444444444444444444444444444444444444444444444444')
+    ],
+    publicSignals: [
+      ethers.BigNumber.from(deviceData.capacity),
+      ethers.BigNumber.from(deviceData.installationDate)
+    ]
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      setMessage({ type: 'error', text: 'Please fix the validation errors before submitting' });
-      return;
-    }
-    
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setMessage({ type: '', text: '' });
+
     try {
-      setIsLoading(true);
-      setMessage({ type: '', text: '' });
-      setRegistrationStep(1);
-      
-      // Step 1: Register device with backend
-      const deviceFormData = new FormData();
-      Object.keys(formData).forEach(key => {
-        if (key === 'certificationFile' && formData[key]) {
-          deviceFormData.append('certificationFile', formData[key]);
-        } else if (formData[key]) {
-          deviceFormData.append(key, formData[key]);
-        }
-      });
-      
-      const response = await apiService.registerDevice(deviceFormData);
-      
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to register device');
+      const form = new FormData();
+      form.append('deviceName', formData.deviceName.trim());
+      form.append('deviceType', formData.deviceType);
+      form.append('capacity', formData.capacity.toString());
+      form.append('location', formData.location.trim());
+      form.append('manufacturer', formData.manufacturer.trim());
+      form.append('model', formData.model.trim());
+      form.append('serialNumber', formData.serialNumber.trim());
+      form.append('installationDate', new Date(formData.installationDate).toISOString());
+      if (formData.description) form.append('description', formData.description.trim());
+      if (formData.certificationFile) {
+        form.append('certificationFile', formData.certificationFile);
       }
-      
+
+      setRegistrationStep(1);
+      const response = await apiService.registerDevice(form, true);
+
+      if (!response.success) throw new Error(response.message);
+
       setDeviceId(response.device.id);
-      setRegistrationStep(2);
-      setMessage({ type: 'success', text: 'Device registered successfully! Now minting blockchain token...' });
-      
-      // Step 2: Mint blockchain token (if blockchain is available)
+      setMessage({ type: 'success', text: 'Device registered successfully! Processing blockchain integration...' });
+      setRegistrationStep(4);
+
+      // Blockchain registration (async, does not block UI)
       try {
-        const userAddress = await blockchainService.getAccount();
-        
-        if (userAddress) {
-          const deviceData = {
-            owner: userAddress,
-            carbonAmount: Math.floor(parseFloat(formData.capacity) * 100), // Estimate carbon credits
-            energyAmount: Math.floor(parseFloat(formData.capacity) * 1000), // Estimate energy amount
-            projectHash: generateProjectHash(),
-            projectType: formData.deviceType,
-            location: formData.location,
-            vintage: new Date(formData.installationDate).getFullYear(),
-            uri: `ipfs://device-${formData.serialNumber}`
-          };
-          
-          const proof = generateMockProof();
-          
-          const tx = await blockchainService.registerDevice(deviceData, proof);
-          setBlockchainTxHash(tx.hash);
-          setRegistrationStep(3);
-          
-          // Wait for transaction confirmation
-          await tx.wait();
-          setRegistrationStep(4);
-          setMessage({ 
-            type: 'success', 
-            text: 'Device registered and blockchain token minted successfully! 🎉' 
-          });
-        } else {
-          setRegistrationStep(4);
-          setMessage({ 
-            type: 'success', 
-            text: 'Device registered successfully! Blockchain integration not available.' 
-          });
-        }
+        setRegistrationStep(2);
+        await blockchainService.initialize();
+        const userAddress = await blockchainService.signer.getAddress();
+        const deviceData = {
+          deviceId: response.device.id,
+          owner: userAddress,
+          capacity: ethers.utils.parseUnits(formData.capacity.toString(), 18),
+          installationDate: Math.floor(new Date(formData.installationDate).getTime() / 1000),
+          deviceType: formData.deviceType,
+          locationHash: ethers.utils.id(formData.location)
+        };
+        const proof = generateMockProof(deviceData);
+        setRegistrationStep(3);
+        const tx = await blockchainService.carbonCreditToken.registerDevice(
+          deviceData.deviceId,
+          deviceData.owner,
+          deviceData.capacity,
+          deviceData.deviceType,
+          deviceData.locationHash,
+          proof.a,
+          proof.b,
+          proof.c,
+          proof.publicSignals
+        );
+        setBlockchainTxHash(tx.hash);
+        setMessage({ type: 'success', text: 'Blockchain integration complete! Device fully registered.' });
       } catch (blockchainError) {
-        console.error('Blockchain registration failed:', blockchainError);
-        setRegistrationStep(4);
-        setMessage({ 
-          type: 'success', 
-          text: 'Device registered successfully! Blockchain integration failed but device is saved.' 
+        console.error('Blockchain error:', blockchainError);
+        setMessage({
+          type: 'warning',
+          text: 'Device registered, but blockchain integration failed. Contact support.'
         });
       }
-      
+
     } catch (error) {
-      console.error('Device registration error:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to register device' });
+      console.error('Registration error:', error);
+      setMessage({ type: 'error', text: error.message || 'Registration failed. Check all fields.' });
       setRegistrationStep(1);
     } finally {
       setIsLoading(false);

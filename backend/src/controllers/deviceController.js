@@ -5,38 +5,27 @@ const path = require('path');
 const fs = require('fs').promises;
 const { validationResult } = require('express-validator');
 
-// Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: async function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../../uploads/certifications');
-    try {
-      await fs.mkdir(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    } catch (error) {
-      cb(error);
-    }
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/certifications/');
   },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `cert-${uniqueSuffix}${path.extname(file.originalname)}`);
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-  if (allowedTypes.includes(file.mimetype)) {
+  if (['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only PDF and image files are allowed'), false);
+    cb(new Error('Invalid file type'), false);
   }
 };
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
 // Get client IP address
@@ -48,134 +37,172 @@ const getClientIP = (req) => {
 };
 
 // Register new device
-exports.registerDevice = [
-  upload.single('certificationFile'),
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        // Clean up uploaded file if validation fails
-        if (req.file) {
-          await fs.unlink(req.file.path).catch(console.error);
-        }
-        return res.status(400).json({
-          success: false,
-          message: 'Validation failed',
-          errors: errors.array()
-        });
-      }
+exports.registerDevice = async (req, res) => {
+  console.log('[Device Registration] Starting process');
+  console.log('Authenticated user:', req.user);
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Uploaded file:', req.file);
 
-      const userId = req.user.userId;
-      const {
-        deviceName,
-        deviceType,
-        capacity,
-        location,
-        description,
-        serialNumber,
-        manufacturer,
-        model,
-        installationDate
-      } = req.body;
+  let cleanupFile = null;
+  
+  try {
+    // Cleanup guard clause
+    if (req.file) cleanupFile = req.file.path;
 
-      // Check if user already has a device with the same name
-      const existingDevice = await Device.findOne({
-        owner: userId,
-        deviceName: deviceName.trim(),
-        isActive: true
-      });
-
-      if (existingDevice) {
-        if (req.file) {
-          await fs.unlink(req.file.path).catch(console.error);
-        }
-        return res.status(400).json({
-          success: false,
-          message: 'You already have a device with this name'
-        });
-      }
-
-      // Parse location if it's a string
-      let locationData = location;
-      if (typeof location === 'string') {
-        locationData = { address: location };
-      }
-
-      // Prepare device data
-      const deviceData = {
-        owner: userId,
-        deviceName: deviceName.trim(),
-        deviceType,
-        capacity: parseFloat(capacity),
-        location: locationData,
-        description: description?.trim(),
-        specifications: {
-          serialNumber: serialNumber?.trim(),
-          manufacturer: manufacturer?.trim(),
-          model: model?.trim(),
-          installationDate: installationDate ? new Date(installationDate) : null
-        },
-        metadata: {
-          registrationIP: getClientIP(req),
-          userAgent: req.get('User-Agent'),
-          source: 'web'
-        }
-      };
-
-      // Add certification file info if uploaded
-      if (req.file) {
-        deviceData.certificationFile = {
-          filename: req.file.filename,
-          originalName: req.file.originalname,
-          path: req.file.path,
-          size: req.file.size,
-          mimeType: req.file.mimetype
-        };
-      }
-
-      // Create device
-      const device = new Device(deviceData);
-      await device.save();
-
-      // Update user statistics
-      await User.findByIdAndUpdate(userId, {
-        $inc: { 'statistics.totalDevices': 1 }
-      });
-
-      // Populate owner info for response
-      await device.populate('owner', 'username email fullName');
-
-      res.status(201).json({
-        success: true,
-        message: 'Device registered successfully. It will be reviewed within 24-48 hours.',
-        device: {
-          id: device._id,
-          deviceName: device.deviceName,
-          deviceType: device.deviceType,
-          capacity: device.capacity,
-          location: device.location,
-          verificationStatus: device.verification.status,
-          createdAt: device.createdAt,
-          status: device.status
-        }
-      });
-
-    } catch (error) {
-      console.error('Device registration error:', error);
-      
-      // Clean up uploaded file if there was an error
-      if (req.file) {
-        await fs.unlink(req.file.path).catch(console.error);
-      }
-
-      res.status(500).json({
+    // Validation check
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.warn('[Validation Failed] Errors:', errors.array());
+      return res.status(400).json({
         success: false,
-        message: 'Server error during device registration',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    console.log('[Validation] Passed');
+
+    const userId = req.user.userId;
+    const { deviceName } = req.body;
+
+    // Existing device check
+    console.log(`[Duplicate Check] Looking for ${deviceName} for user ${userId}`);
+    const existingDevice = await Device.findOne({
+      owner: userId,
+      deviceName: deviceName.trim(),
+      isActive: true
+    });
+
+    if (existingDevice) {
+      console.warn('[Duplicate Device] Conflict detected:', existingDevice);
+      return res.status(400).json({
+        success: false,
+        message: 'You already have an active device with this name'
+      });
+    }
+
+    // Data preparation
+    console.log('[Data Preparation] Parsing input data');
+    const deviceData = {
+      owner: userId,
+      deviceName: req.body.deviceName.trim(),
+      deviceType: req.body.deviceType,
+      capacity: parseFloat(req.body.capacity),
+      location: parseLocation(req.body.location),
+      description: req.body.description?.trim(),
+      specifications: {
+        serialNumber: req.body.serialNumber?.trim(),
+        manufacturer: req.body.manufacturer?.trim(),
+        model: req.body.model?.trim(),
+        installationDate: req.body.installationDate 
+          ? new Date(req.body.installationDate)
+          : null
+      },
+      metadata: {
+        registrationIP: getClientIP(req),
+        userAgent: req.get('User-Agent'),
+        source: 'web'
+      }
+    };
+
+    // File handling
+    if (req.file) {
+      deviceData.certificationFile = createFileMetadata(req.file);
+      console.log('File metadata added:', deviceData.certificationFile);
+    }
+
+    // Database operations
+    console.log('[Database] Creating new device');
+    const device = new Device(deviceData);
+    await device.save();
+    console.log('Device created:', device._id);
+
+    console.log('[User Update] Incrementing device count');
+    await User.findByIdAndUpdate(userId, {
+      $inc: { 'statistics.totalDevices': 1 }
+    });
+
+    console.log('[Population] Adding owner details');
+    await device.populate('owner', 'username email fullName');
+
+    // Success response
+    console.log('[Success] Device registration complete');
+    res.status(201).json({
+      success: true,
+      message: 'Device registered successfully',
+      device: formatDeviceResponse(device)
+    });
+
+    // Clear cleanup marker after successful save
+    cleanupFile = null;
+
+  } catch (error) {
+    console.error('[Registration Error]', error);
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error.message 
+      : 'Server error during registration';
+
+    res.status(500).json({
+      success: false,
+      message: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  } finally {
+    // Cleanup uploaded file if something failed
+    if (cleanupFile) {
+      console.log('[Cleanup] Removing orphaned file:', cleanupFile);
+      await fs.unlink(cleanupFile).catch(cleanupError => {
+        console.error('[Cleanup Error] Failed to remove file:', cleanupError);
       });
     }
   }
-];
+};
+
+
+
+//helper functions 
+
+
+
+function parseLocation(locationInput) {
+  try {
+    return typeof locationInput === 'string' 
+      ? JSON.parse(locationInput)
+      : locationInput;
+  } catch (error) {
+    console.warn('[Location Parse] Using fallback address parsing');
+    return { address: locationInput.toString() };
+  }
+}
+
+function createFileMetadata(file) {
+  return {
+    filename: file.filename,
+    originalName: file.originalname,
+    path: file.path,
+    size: file.size,
+    mimeType: file.mimetype,
+    uploadedAt: new Date()
+  };
+}
+
+function formatDeviceResponse(device) {
+  return {
+    id: device._id,
+    deviceName: device.deviceName,
+    deviceType: device.deviceType,
+    capacity: device.capacity,
+    location: device.location,
+    status: device.status,
+    verification: device.verification,
+    createdAt: device.createdAt
+  };
+}
+
+// helper functions
+
+/////////////////////////////
+
 
 // Get user's devices
 exports.getUserDevices = async (req, res) => {

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const blockchainService = require('../utils/blockchain');
+const blockchainService = require('../utils/blockchainService');
 
 // Get blockchain status
 router.get('/status', async (req, res) => {

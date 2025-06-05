@@ -261,14 +261,24 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async registerDevice(deviceData) {
-    const response = await fetch(`${API_BASE_URL}/devices/register`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(deviceData)
-    });
-    return this.handleResponse(response);
+  async registerDevice(formData, isFormData = true) {
+  let headers = this.getHeaders();
+
+  if (isFormData) {
+    // Remove Content-Type so browser sets it for FormData
+    delete headers['Content-Type'];
   }
+
+  const response = await fetch(`${API_BASE_URL}/devices/register`, {
+    method: 'POST',
+    headers,
+    body: formData
+  });
+
+  return this.handleResponse(response);
+}
+
+
 
   async updateDevice(deviceId, updateData) {
     const response = await fetch(`${API_BASE_URL}/devices/${deviceId}`, {

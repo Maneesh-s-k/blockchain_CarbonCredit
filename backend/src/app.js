@@ -35,7 +35,7 @@ const { authenticate } = require('./middleware/auth');
 // Import services
 const realtimeService = require('./utils/realtimeService');
 const analyticsService = require('./utils/analyticsService');
-const blockchainService = require('./utils/blockchain');
+const blockchainService = require('./utils/blockchainService');
 
 const app = express();
 const server = http.createServer(app);

@@ -1,10 +1,11 @@
-import { ethers, formatEther, parseEther, BrowserProvider, Contract } from 'ethers';
+
+
 import { CONTRACT_ADDRESSES, NETWORK_CONFIG } from '../config/contracts';
 
 // Import ABIs (copy from your blockchain/artifacts)
 import CarbonCreditTokenABI from '../abis/CarbonCreditToken.json';
 import MarketplaceABI from '../abis/CarbonCreditMarketplace.json';
-
+const { ethers } = require('ethers'); // CommonJS require
 class BlockchainService {
   constructor() {
     this.provider = null;
@@ -15,38 +16,39 @@ class BlockchainService {
     this.marketplace = null;
   }
 
-  async initialize() {
-    try {
-      if (window.ethereum) {
-        this.provider = new BrowserProvider(window.ethereum);
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        this.signer = await this.provider.getSigner();
-        
-        this.contracts.carbonCreditToken = new Contract(
-          CONTRACT_ADDRESSES.carbonCreditToken,
-          CarbonCreditTokenABI.abi,
-          this.signer
-        );
-        
-        this.contracts.marketplace = new Contract(
-          CONTRACT_ADDRESSES.marketplace,
-          MarketplaceABI.abi,
-          this.signer
-        );
-
-        this.carbonToken = this.contracts.carbonCreditToken;
-        this.marketplace = this.contracts.marketplace;
-
-        this.isInitialized = true;
-        return await this.signer.getAddress();
-      } else {
-        throw new Error('MetaMask not found. Please install MetaMask to continue.');
-      }
-    } catch (error) {
-      console.error('Failed to initialize blockchain service:', error);
-      throw error;
+   async initialize() {
+  try {
+    if (!window.ethereum) throw new Error('MetaMask not detected');
+    // Step 1: Ensure Sepolia
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== '0xaa36a7') {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xaa36a7' }]
+      });
     }
+    // Step 2: Request account access
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts.length) throw new Error('No MetaMask accounts found');
+    // Step 3: Provider and signer
+    this.provider = new ethers.providers.Web3Provider(window.ethereum);
+    this.signer = this.provider.getSigner();
+    // Step 4: Contracts
+    this.contracts.carbonCreditToken = new ethers.Contract(
+      CONTRACT_ADDRESSES.sepolia.carbonCreditToken,
+      CarbonCreditTokenABI.abi,
+      this.signer
+    );
+    this.isInitialized = true;
+    return accounts[0];
+  } catch (error) {
+    console.error('Blockchain init failed:', error);
+    throw error;
   }
+}
+
+
+
 
   async ensureInitialized() {
     if (!this.isInitialized) {
@@ -62,7 +64,7 @@ class BlockchainService {
   async getBalance(address) {
     await this.ensureInitialized();
     const balance = await this.provider.getBalance(address);
-    return formatEther(balance);
+    return ethers.utils.formatEther(balance);
   }
 
   async getNetwork() {
@@ -210,7 +212,7 @@ class BlockchainService {
       return [
         stats[0].toString(),
         stats[1].toString(),
-        formatEther(stats[2])
+        ethers.utils.formatEther(stats[2])
       ];
     } catch (error) {
       console.error('Error getting marketplace stats:', error);
@@ -256,7 +258,7 @@ class BlockchainService {
               id: i,
               tokenId: listing.tokenId.toString(),
               seller: listing.seller,
-              pricePerCredit: formatEther(listing.pricePerCredit),
+              pricePerCredit: ethers.utils.formatEther(listing.pricePerCredit),
               amount: listing.amount.toString(),
               projectType: listing.projectType || tokenDetails.projectType,
               active: listing.active,
@@ -310,7 +312,7 @@ class BlockchainService {
         throw new Error('Listing not found');
       }
       
-      const priceInWei = parseEther(price.toString());
+      const priceInWei = ethers.utils.parseEther(price.toString());
       
       const tx = await this.contracts.marketplace.purchaseCredits(listing.id, 1, {
         value: priceInWei,
@@ -324,25 +326,21 @@ class BlockchainService {
     }
   }
 
-  async listCreditForSale(tokenId, price) {
-    try {
-      await this.ensureInitialized();
-      
-      const priceInWei = parseEther(price.toString());
-      
-      const approveTx = await this.approveToken(tokenId);
-      await approveTx.wait();
-      
-      const tx = await this.contracts.marketplace.createListing(tokenId, priceInWei, 1, {
-        gasLimit: 300000
-      });
-      
-      return tx;
-    } catch (error) {
-      console.error('Error listing credit:', error);
-      throw this.handleError(error);
-    }
+async listCreditForSale(tokenId, price) {
+    await this.ensureInitialized();
+    const priceInWei = ethers.utils.parseEther(price.toString());
+    const approveTx = await this.approveToken(tokenId);
+    await approveTx.wait();
+    
+    const tx = await this.contracts.marketplace.createListing(
+      tokenId,
+      priceInWei,
+      1,
+      { gasLimit: 300000 }
+    );
+    return tx;
   }
+
 
   async cancelListing(tokenId) {
     try {
@@ -372,14 +370,14 @@ class BlockchainService {
     const approveTx = await this.approveToken(tokenId);
     await approveTx.wait();
     
-    const priceInWei = parseEther(pricePerCredit.toString());
+    const priceInWei = ethers.utils.parseEther(pricePerCredit.toString());
     
     return await this.contracts.marketplace.createListing(tokenId, priceInWei, amount);
   }
 
   async purchaseCredits(listingId, amount, totalPriceInEth) {
     await this.ensureInitialized();
-    const totalPriceInWei = parseEther(totalPriceInEth.toString());
+    const totalPriceInWei = ethers.utils.parseEther(totalPriceInEth.toString());
     
     return await this.contracts.marketplace.purchaseCredits(listingId, amount, {
       value: totalPriceInWei
@@ -553,7 +551,7 @@ class BlockchainService {
     try {
       await this.ensureInitialized();
       
-      const priceInWei = parseEther(energyData.price.toString());
+      const priceInWei = ethers.utils.parseEther(energyData.price.toString());
       
       const tx = await this.contracts.marketplace.createListing(
         energyData.tokenId,
@@ -575,7 +573,7 @@ class BlockchainService {
     try {
       await this.ensureInitialized();
       
-      const priceInWei = parseEther(totalPrice.toString());
+      const priceInWei = ethers.utils.parseEther(totalPrice.toString());
       
       const tx = await this.contracts.marketplace.purchaseCredits(listingId, amount, {
         value: priceInWei,

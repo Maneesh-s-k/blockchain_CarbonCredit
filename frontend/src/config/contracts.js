@@ -1,25 +1,26 @@
+// config/contracts.js
 export const CONTRACT_ADDRESSES = {
-  carbonCreditToken: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
-  marketplace: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
-  carbonCreditVerifier: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-  transferVerifier: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+  sepolia: { // Added sepolia parent key
+    carbonCreditToken: '0xCa33F82670f4fB196CEDe4741F6045983893f0df',
+    marketplace: '0x533FCA53FB28A56695Ae12D0524bE25dC08C3D9E',
+    carbonCreditVerifier: '0xC82DE1f1336810c00e43e22150493946272d7D13',
+    transferVerifier: '0xf44B74671E536265D69372a80f9ffC1F060bE2F3'
+  }
 };
 
 export const NETWORK_CONFIG = {
-  chainId: 31337,
-  name: 'Hardhat Local',
-  rpcUrl: 'http://127.0.0.1:8545',
+  sepolia: { // Added sepolia parent key
+    chainId: 11155111,
+    name: 'Sepolia Testnet',
+    rpcUrl: 'https://sepolia.infura.io/v3/e9f45b5ac11648cbab735fc0f755096c',
+    blockExplorer: 'https://sepolia.etherscan.io'
+  }
 };
 
 export const SUPPORTED_NETWORKS = {
-  31337: {
-    name: 'Hardhat Local',
-    rpcUrl: 'http://127.0.0.1:8545',
-    blockExplorer: null,
-  },
   11155111: {
     name: 'Sepolia Testnet',
-    rpcUrl: 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY',
-    blockExplorer: 'https://sepolia.etherscan.io',
+    rpcUrl: 'https://sepolia.infura.io/v3/e9f45b5ac11648cbab735fc0f755096c',
+    blockExplorer: 'https://sepolia.etherscan.io'
   }
 };

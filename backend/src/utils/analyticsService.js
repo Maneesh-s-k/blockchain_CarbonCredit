@@ -3,7 +3,7 @@ const Transaction = require('../models/Transaction');
 const EnergyListing = require('../models/EnergyListing');
 const CarbonCredit = require('../models/CarbonCredit');
 const Analytics = require('../models/Analytics');
-const blockchainService = require('./blockchain');
+const blockchainService = require('./blockchainService');
 
 class AnalyticsService {
   constructor() {

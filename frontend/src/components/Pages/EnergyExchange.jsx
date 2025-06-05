@@ -1,9 +1,12 @@
 // components/Pages/EnergyExchange.jsx - REAL DATA VERSION
+import { utils } from 'ethers';
+import { keccak256 } from '@ethersproject/keccak256';
+import { toUtf8Bytes } from '@ethersproject/strings';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { apiService } from '../../services/apiService';
 import { blockchainService } from '../../services/blockchainService';
-import ZKProofGenerator from '../Blockchain/ZKProofGenerator';
+import { generateTransferProof,poseidonHash } from '../../utils/zkproofGenerator';
 import ErrorBoundary from '../Shared/ErrorBoundary';
 import { 
   FiDollarSign, 
@@ -27,6 +30,7 @@ import {
   FiEdit,
   FiTrash2
 } from 'react-icons/fi';
+
 
 export default function EnergyExchange() {
   const [activeTab, setActiveTab] = useState('marketplace');
@@ -66,8 +70,42 @@ export default function EnergyExchange() {
     preferences: { negotiable: true, autoAccept: false }
   });
 
+    const [zkData, setZkData] = useState({
+      senderBalance: '0', // Example default
+     transferAmount: '0',
+    senderSecret: 'secret123',
+    receiverSecret: 'secret456',
+    nonce: Date.now().toString(),
+     nullifierHash: keccak256(toUtf8Bytes('init')),
+    senderCommitment: '',
+    receiverCommitment: '',
+    merkleRoot: '0x'
+  });
+
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Calculate commitments on mount/update
+useEffect(() => {
+  const senderCommitment = poseidonHash([
+    zkData.senderBalance,
+    zkData.senderSecret,
+    zkData.nonce
+  ]);
+  
+  const newSenderCommitment = poseidonHash([
+    zkData.senderBalance - zkData.transferAmount,
+    zkData.senderSecret,
+    zkData.nonce + 1
+  ]);
+
+  setZkData(prev => ({
+    ...prev,
+    senderCommitment,
+    newSenderCommitment
+  }));
+}, [zkData.senderBalance, zkData.transferAmount]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -356,11 +394,12 @@ export default function EnergyExchange() {
     setError('');
   };
 
-  const generateZKProof = async () => {
+ const generateZKProof = async () => {
     try {
       setIsLoading(true);
       setError('');
       
+      // Validate inputs
       if (!zkTradingData.transferAmount || !zkTradingData.receiverAddress) {
         throw new Error('Please fill in all required fields');
       }
@@ -369,12 +408,17 @@ export default function EnergyExchange() {
         throw new Error('Transfer amount exceeds your balance');
       }
 
-      // Generate ZK proof for private transfer
-      const proof = await ZKProofGenerator.generateTransferProof(
-        zkTradingData.senderBalance,
-        parseInt(zkTradingData.transferAmount),
-        zkTradingData.senderSecret || Math.floor(Math.random() * 1000000).toString(),
-        zkTradingData.receiverSecret || Math.floor(Math.random() * 1000000).toString()
+      // Generate proof with proper parameters
+      const proof = await generateTransferProof(
+        zkData.senderBalance,
+        zkData.transferAmount,
+        zkData.senderSecret,
+        zkData.receiverSecret,
+        zkData.nonce,
+        zkData.nullifierHash,
+        zkData.senderCommitment,
+        zkData.receiverCommitment,
+        zkData.merkleRoot
       );
 
       setZkProof(proof);

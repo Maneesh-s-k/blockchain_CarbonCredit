@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const { body, param, query } = require('express-validator');
 const deviceController = require('../controllers/deviceController');
+
+
 
 // Validation middleware
 const validateDeviceRegistration = [
@@ -13,12 +16,21 @@ const validateDeviceRegistration = [
     .isIn(['solar', 'wind', 'hydro', 'geothermal', 'biomass'])
     .withMessage('Invalid device type'),
   body('capacity')
+    .toFloat()
     .isFloat({ min: 0.1, max: 10000 })
     .withMessage('Capacity must be between 0.1 and 10,000 kW'),
   body('location')
     .trim()
     .isLength({ min: 1, max: 200 })
-    .withMessage('Location must be between 1 and 200 characters')
+    .withMessage('Location must be between 1 and 200 characters'),
+  body('manufacturer')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Manufacturer is required'),
+  body('serialNumber')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Serial number is required')
 ];
 
 const validateDeviceUpdate = [
@@ -32,8 +44,41 @@ const validatePagination = [
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
 ];
 
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/certifications/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only PDF/JPEG/PNG files allowed'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+
+
+
+
 // Device routes - using the correct function names from your controller
-router.post('/register', validateDeviceRegistration, deviceController.registerDevice);
+//router.post('/register', validateDeviceRegistration, deviceController.registerDevice);
+router.post(
+  '/register',
+  upload.single('certificationFile'),
+  validateDeviceRegistration,
+  deviceController.registerDevice
+);
 router.get('/', validatePagination, deviceController.getUserDevices);
 router.get('/available', validatePagination, deviceController.getAvailableDevices);
 router.get('/:deviceId', param('deviceId').isMongoId(), deviceController.getDeviceById);
