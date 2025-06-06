@@ -1,5 +1,6 @@
 // components/Pages/EnergyExchange.jsx - REAL DATA VERSION
 import { utils } from 'ethers';
+import {ethers} from 'ethers';
 import { keccak256 } from '@ethersproject/keccak256';
 import { toUtf8Bytes } from '@ethersproject/strings';
 import React, { useState, useEffect } from 'react';
@@ -8,6 +9,7 @@ import { apiService } from '../../services/apiService';
 import { blockchainService } from '../../services/blockchainService';
 import { generateTransferProof,poseidonHash } from '../../utils/zkproofGenerator';
 import ErrorBoundary from '../Shared/ErrorBoundary';
+import { MerkleTree } from 'merkletreejs';
 import { 
   FiDollarSign, 
   FiShoppingCart, 
@@ -78,6 +80,7 @@ export default function EnergyExchange() {
     nonce: Date.now().toString(),
      nullifierHash: keccak256(toUtf8Bytes('init')),
     senderCommitment: '',
+     newSenderCommitment: '',
     receiverCommitment: '',
     merkleRoot: '0x'
   });
@@ -99,6 +102,12 @@ useEffect(() => {
     zkData.senderSecret,
     zkData.nonce + 1
   ]);
+  
+  const receiverCommitment =  poseidonHash([
+      zkData.transferAmount,
+      zkData.receiverSecret,
+      zkData.nonce
+    ]);
 
   setZkData(prev => ({
     ...prev,
@@ -106,6 +115,8 @@ useEffect(() => {
     newSenderCommitment
   }));
 }, [zkData.senderBalance, zkData.transferAmount]);
+
+
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -395,42 +406,73 @@ useEffect(() => {
   };
 
  const generateZKProof = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      // Validate inputs
-      if (!zkTradingData.transferAmount || !zkTradingData.receiverAddress) {
-        throw new Error('Please fill in all required fields');
-      }
-      
-      if (parseInt(zkTradingData.transferAmount) > zkTradingData.senderBalance) {
-        throw new Error('Transfer amount exceeds your balance');
-      }
+  try {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
 
-      // Generate proof with proper parameters
-      const proof = await generateTransferProof(
-        zkData.senderBalance,
-        zkData.transferAmount,
-        zkData.senderSecret,
-        zkData.receiverSecret,
-        zkData.nonce,
-        zkData.nullifierHash,
-        zkData.senderCommitment,
-        zkData.receiverCommitment,
-        zkData.merkleRoot
-      );
-
-      setZkProof(proof);
-      setSuccess('ZK proof generated successfully! 🔐');
-      
-    } catch (error) {
-      console.error('Error generating ZK proof:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
+    // Validate required trading data
+    if (!zkTradingData.transferAmount || !zkTradingData.receiverAddress) {
+      throw new Error('Please fill in all required trading fields');
     }
-  };
+
+    // Validate numerical inputs
+    const transferAmount = parseInt(zkTradingData.transferAmount);
+    if (isNaN(transferAmount)) {
+      throw new Error('Invalid transfer amount');
+    }
+
+    if (transferAmount > zkData.senderBalance) {
+      throw new Error('Transfer amount exceeds sender balance');
+    }
+
+    // Validate cryptographic inputs
+    const requiredZkFields = [
+      'senderBalance', 'transferAmount', 'senderSecret', 'receiverSecret',
+      'nonce', 'nullifierHash', 'senderCommitment', 'newSenderCommitment',
+      'receiverCommitment', 'merkleRoot'
+    ];
+
+    for (const field of requiredZkFields) {
+      if (!zkData[field]) {
+        throw new Error(`Missing required ZK parameter: ${field}`);
+      }
+    }
+
+    // Generate Merkle Tree (example implementation)
+    const leaves = [zkData.senderCommitment, zkData.receiverCommitment]
+      .map(x => ethers.utils.keccak256(x));
+    
+    const merkleTree = new MerkleTree(leaves, ethers.utils.keccak256, { sort: true });
+    const merkleRoot = merkleTree.getHexRoot();
+      
+    // Generate proof with all required parameters
+    const proof = await generateTransferProof(
+      zkData.senderBalance.toString(),
+      zkData.transferAmount.toString(),
+      zkData.senderSecret,
+      zkData.receiverSecret,
+      zkData.nonce.toString(),
+      zkData.nullifierHash,
+      zkData.senderCommitment,
+      zkData.newSenderCommitment, // Added missing parameter
+      zkData.receiverCommitment,
+      zkData.merkleRoot // Use generated merkle root
+    );
+
+    setZkProof(proof);
+    setSuccess('ZK proof generated successfully! 🔐');
+    return proof;
+
+  } catch (error) {
+    console.error('ZK Proof Generation Error:', error);
+    setError(error.message);
+    throw error; // Re-throw for external error handling
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const executePrivateTransfer = async () => {
     try {
