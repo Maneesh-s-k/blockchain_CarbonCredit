@@ -63,8 +63,8 @@ export const generateTransferProof = async (
     // Convert all values to strings and validate
     const inputs = {
       senderBalance: senderBalance.toString(),
-      transferAmount: transferAmount.toString(),
-      senderSecret: senderSecret.toString(),
+      transferAmount: transferAmounBigInt.toString(),
+      senderSecret: senderSecretBigInt.toString(),
       receiverSecret: receiverSecret.toString(),
       nonce: nonce.toString(),
       nullifierHash: nullifierHash.toString(),
