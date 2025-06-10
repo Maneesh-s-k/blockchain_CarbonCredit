@@ -62,7 +62,7 @@ out/
 .next/
 .nuxt/
 .cache/
-public/
+
 
 # Backend specific
 uploads/
