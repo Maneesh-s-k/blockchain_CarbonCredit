@@ -1,26 +1,34 @@
-// config/contracts.js
+
+console.log('ENV:', process.env.REACT_APP_CARBON_CREDIT_TOKEN, process.env.REACT_APP_MARKETPLACE, process.env.REACT_APP_VERIFIER_CARBON, process.env.REACT_APP_VERIFIER_TRANSFER, process.env.REACT_APP_RPC_URL, process.env.REACT_APP_BLOCK_EXPLORER);
+
+
 export const CONTRACT_ADDRESSES = {
-  sepolia: { // Added sepolia parent key
-    carbonCreditToken: '0xCa33F82670f4fB196CEDe4741F6045983893f0df',
-    marketplace: '0x533FCA53FB28A56695Ae12D0524bE25dC08C3D9E',
-    carbonCreditVerifier: '0xC82DE1f1336810c00e43e22150493946272d7D13',
-    transferVerifier: '0xf44B74671E536265D69372a80f9ffC1F060bE2F3'
+  sepolia: {
+    carbonCreditToken: process.env.REACT_APP_CARBON_CREDIT_TOKEN,
+    marketplace: process.env.REACT_APP_MARKETPLACE,
+    carbonCreditVerifier: process.env.REACT_APP_VERIFIER_CARBON,
+    transferVerifier: process.env.REACT_APP_VERIFIER_TRANSFER
   }
 };
 
 export const NETWORK_CONFIG = {
-  sepolia: { // Added sepolia parent key
+  sepolia: {
     chainId: 11155111,
     name: 'Sepolia Testnet',
-    rpcUrl: 'https://sepolia.infura.io/v3/e9f45b5ac11648cbab735fc0f755096c',
-    blockExplorer: 'https://sepolia.etherscan.io'
+    rpcUrl: process.env.REACT_APP_RPC_URL,
+    blockExplorer: process.env.REACT_APP_BLOCK_EXPLORER
   }
 };
 
 export const SUPPORTED_NETWORKS = {
   11155111: {
     name: 'Sepolia Testnet',
-    rpcUrl: 'https://sepolia.infura.io/v3/e9f45b5ac11648cbab735fc0f755096c',
-    blockExplorer: 'https://sepolia.etherscan.io'
+    rpcUrl: process.env.REACT_APP_RPC_URL,
+    blockExplorer: process.env.REACT_APP_BLOCK_EXPLORER
   }
 };
+
+// ---- DEBUG LOG ----
+console.log('Loaded CONTRACT_ADDRESSES:', CONTRACT_ADDRESSES);
+console.log('Loaded NETWORK_CONFIG:', NETWORK_CONFIG);
+console.log('Loaded SUPPORTED_NETWORKS:', SUPPORTED_NETWORKS);
