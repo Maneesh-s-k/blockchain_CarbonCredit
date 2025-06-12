@@ -3,6 +3,7 @@ const router = express.Router();
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
+const { OAuth2Client } = require('google-auth-library');
 
 // Validation middleware
 const validateRegister = [
@@ -89,5 +90,7 @@ router.post('/change-password', authenticate, validateChangePassword, authContro
 
 // Profile
 router.get('/profile', authenticate, authController.getProfile);
-
+router.post('/google', [
+  body('credential').notEmpty().withMessage('Google credential is required')
+], authController.googleAuth);
 module.exports = router;

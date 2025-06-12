@@ -92,28 +92,20 @@
 
 .input-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
 }
-
 .input-icon {
   position: absolute;
-  left: 1rem;
-  z-index: 1;
-  font-size: 1rem;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1rem;
+  color: #888;
+  pointer-events: none;
+}
+.form-input {
+  padding-left: 2.5rem !important;
 }
 
-.form-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  color: #ffffff;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
 
 .form-input:focus {
   outline: none;
@@ -132,14 +124,16 @@
 
 .password-toggle {
   position: absolute;
-  right: 1rem;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
-  color: #9ca3af;
+  color: #888;
   cursor: pointer;
-  font-size: 1rem;
-  transition: color 0.3s ease;
+  font-size: 1.1rem;
 }
+
 
 .password-toggle:hover {
   color: #ffffff;
@@ -357,7 +351,6 @@
 .password-strength {
   margin-top: 8px;
 }
-
 .strength-bar {
   width: 100%;
   height: 4px;
@@ -516,4 +509,51 @@
   .strength-feedback {
     font-size: 10px;
   }
+}
+
+/* Add these styles to your auth.css */
+.glass-container {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-info-panel {
+  background: rgba(12, 74, 110, 0.3);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Fix icon collision */
+.input-wrapper {
+  position: relative;
+}
+
+.input-icon {
+  position: absolute left-3 top-1/2 -translate-y-1/2 text-gray-400;
+}
+
+.form-input {
+  position: pl-10 pr-4; /* Add padding for icons */
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;  /* 3px */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Animated background effects */
+@keyframes circuit-glow {
+  0% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 0.1; }
+}
+
+.circuit-line {
+  position: absolute h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent;
+  animation: circuit-glow 3s infinite;
 }

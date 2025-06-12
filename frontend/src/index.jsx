@@ -1,15 +1,23 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { Buffer } from 'buffer';
-import process from 'process';
-import App from "./App.jsx";
-import "./styles/main.css";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import './styles/main.css';
 
-window.Buffer = Buffer;
-window.process = process;
+// Initialize environment variables and polyfills
+window.Buffer = Buffer || require('buffer').Buffer;
+window.process = process || require('process/browser');
 
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
+// Get Google Client ID from environment variables
+const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+// Create root once and reuse it
+const root = ReactDOM.createRoot(document.getElementById('root'));
+
+root.render(
+  <React.StrictMode>
+    <GoogleOAuthProvider clientId={clientId}>
+      <App />
+    </GoogleOAuthProvider>
+  </React.StrictMode>
 );

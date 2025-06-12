@@ -3,6 +3,18 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
+  // Google OAuth fields (ADDED)
+  googleId: {
+    type: String,
+    default: null
+  },
+  authMethod: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
+
+  // Existing fields below (unchanged)
   username: {
     type: String,
     required: [true, 'Username is required'],

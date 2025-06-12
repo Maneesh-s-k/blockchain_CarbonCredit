@@ -408,4 +408,59 @@ exports.changePassword = async (req, res) => {
   }
 };
 
+// controllers/authController.js (add this method)
+exports.googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    const client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET
+    );
+
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    
+    // Find or create user
+    let user = await User.findOne({ email: payload.email });
+    
+    if (!user) {
+      user = new User({
+        email: payload.email,
+        firstName: payload.given_name,
+        lastName: payload.family_name,
+        isEmailVerified: true,
+        authMethod: 'google',
+        avatar: payload.picture
+      });
+      await user.save();
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+    
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.security;
+
+    res.json({
+      success: true,
+      message: 'Google authentication successful',
+      user: userResponse,
+      tokens: { accessToken, refreshToken }
+    });
+
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Google authentication failed'
+    });
+  }
+};
+
+
+
 module.exports = exports;
