@@ -9,22 +9,20 @@ import MainContent from './components/Dashboard/MainContent';
 import ForgotPassword from './components/Pages/Auth/ForgotPassword';
 import ResetPassword from './components/Pages/Auth/ResetPassword';
 import ApiTest from './components/Test/ApiTest';
-
-
+import VerifyEmail from './components/Pages/Auth/VerifyEmail';
 import './styles/main.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <WalletProvider>
-        <Router>
+    
+      <AuthProvider>
+        <WalletProvider>
           <div className="App">
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               
-              {/* Protected Dashboard Routes */}
               <Route 
                 path="/*" 
                 element={
@@ -35,12 +33,13 @@ function App() {
               />
               <Route path="/test" element={<ApiTest />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-             <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/verify-email/:token" element={<VerifyEmail />} /> 
             </Routes>
           </div>
-        </Router>
-      </WalletProvider>
-    </AuthProvider>
+        </WalletProvider>
+      </AuthProvider>
+ 
   );
 }
 

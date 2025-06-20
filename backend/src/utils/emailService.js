@@ -239,6 +239,36 @@ class EmailService {
       throw new Error('Failed to send security alert email');
     }
   }
+
+  async sendOTPEmail(email, username, otp) {
+  try {
+    const msg = {
+      to: email,
+      from: { 
+        email: this.fromEmail,
+        name: this.fromName 
+      },
+      subject: 'Your Verification OTP',
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+          <h2 style="color: #2d3748;">Hello ${username},</h2>
+          <p style="font-size: 16px; color: #4a5568;">
+            Your verification code is: 
+            <strong style="font-size: 24px; color: #4299e1;">${otp}</strong>
+          </p>
+          <p style="font-size: 14px; color: #718096;">
+            This code will expire in 10 minutes. If you didn't request this, please ignore this email.
+          </p>
+        </div>
+      `
+    };
+    await sgMail.send(msg);
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
+    throw error;
+  }
+}
+
 }
 
 module.exports = new EmailService();

@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 import { authService } from '../../../services/authService';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiZap, FiAlertTriangle } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertTriangle } from 'react-icons/fi';
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -19,11 +19,13 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
+  const { setUser, setIsAuthenticated } = useAuth();
+
 
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true });
-    // Only clear error on mount
-    // clearError();
+    document.body.classList.add('auth-noscroll');
+    return () => document.body.classList.remove('auth-noscroll');
     // eslint-disable-next-line
   }, [isAuthenticated, navigate, from]);
 
@@ -42,50 +44,63 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(formData);
-    } catch (err) {
-      // error is handled by context
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSuccess = async (response) => {
-    setGoogleError('');
-    try {
-      const result = await authService.googleAuth(response.credential);
-      if (result.success) navigate('/dashboard');
-      else setGoogleError(result.message || "Google authentication failed");
-    } catch (error) {
-      setGoogleError('Google authentication failed');
+   const handleGoogleSuccess = async (response) => {
+  console.log('🟢 [GoogleLogin] Google response:', response);
+  try {
+    const result = await authService.googleAuth(response.credential);
+    console.log('🟢 [GoogleLogin] Backend response:', result);
+    if (result.success) {
+      // Store token
+      localStorage.setItem('token', result.tokens.accessToken);
+      // Update auth state if you use context
+      setUser(result.user);
+      setIsAuthenticated(true);
+      // Now navigate
+      navigate('/dashboard');
+    } else {
+      setGoogleError(result.message || "Google authentication failed");
+      console.error('🔴 [GoogleLogin] Backend error:', result.message);
     }
-  };
+  } catch (err) {
+    setGoogleError('Google authentication failed');
+    console.error('🔴 [GoogleLogin] Exception:', err);
+  }
+};
+
+
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-emerald-900">
-      <div className="auth-container glassmorphism">
-        <div className="auth-card">
-          {/* Header */}
-          <div className="auth-header">
-            <div className="auth-logo">
-              <FiZap className="auth-logo-icon text-3xl text-emerald-400" />
-              <h1 className="auth-logo-text">Energy Exchange</h1>
-            </div>
-            <h2 className="auth-title">Welcome Back</h2>
-            <p className="auth-subtitle">Sign in to your energy trading account</p>
+    <div className="auth-fixed-root">
+      {/* Left: Fixed glassmorphic login box */}
+      <div className="auth-fixed-left">
+        <div
+          className="auth-card"
+          style={{
+            maxWidth: 480,
+            minWidth: 320,
+            width: 380,
+            margin: 0
+          }}
+        >
+          <div className="auth-header" style={{ marginBottom: '1.2rem' }}>
+            {/* No logo, no title, no "Welcome" */}
+            <p className="auth-subtitle" style={{ marginBottom: 0, textAlign: 'left' }}>
+              Sign in to your energy trading account
+            </p>
           </div>
-
-          {/* Error Message */}
           {(error || googleError) && (
             <div className="error-message">
               <FiAlertTriangle className="error-icon" />
               <span>{error || googleError}</span>
             </div>
           )}
-
-          {/* Login Form */}
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {/* Email Input */}
-            <div className="form-group">
+          <form className="auth-form" onSubmit={handleSubmit} style={{ gap: '1rem' }}>
+            <div className="form-group" style={{ gap: '0.25rem' }}>
               <label htmlFor="email" className="form-label">
                 Email Address
               </label>
@@ -101,13 +116,11 @@ export default function Login() {
                   onChange={handleChange}
                   className="form-input"
                   placeholder="energy@trader.com"
-                  style={{ paddingLeft: "2.5rem" }} // Add padding for icon
+                  style={{ paddingLeft: "2.5rem" }}
                 />
               </div>
             </div>
-
-            {/* Password Input */}
-            <div className="form-group">
+            <div className="form-group" style={{ gap: '0.25rem' }}>
               <label htmlFor="password" className="form-label">
                 Password
               </label>
@@ -123,7 +136,7 @@ export default function Login() {
                   onChange={handleChange}
                   className="form-input"
                   placeholder="••••••••"
-                  style={{ paddingLeft: "2.5rem", paddingRight: "2.5rem" }} // Add padding for icons
+                  style={{ paddingLeft: "2.5rem", paddingRight: "2.5rem" }}
                 />
                 <button
                   type="button"
@@ -145,9 +158,7 @@ export default function Login() {
                 </button>
               </div>
             </div>
-
-            {/* Form Options */}
-            <div className="form-options">
+            <div className="form-options" style={{ marginTop: '0.2rem', marginBottom: '0.2rem' }}>
               <label className="checkbox-label">
                 <input
                   type="checkbox"
@@ -162,8 +173,6 @@ export default function Login() {
                 Forgot Password?
               </Link>
             </div>
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -178,13 +187,9 @@ export default function Login() {
                 'Sign In'
               )}
             </button>
-
-            {/* Social Login Divider */}
             <div className="auth-divider">
               <span>Or continue with</span>
             </div>
-
-            {/* Google Sign-In */}
             <div style={{ display: "flex", justifyContent: "center" }}>
               <GoogleLogin
                 theme="filled_black"
@@ -198,9 +203,7 @@ export default function Login() {
                 text="signin_with"
               />
             </div>
-
-            {/* Registration Prompt */}
-            <div className="auth-footer">
+            <div className="auth-footer" style={{ marginTop: '1rem' }}>
               <p>
                 New to Energy Exchange?{' '}
                 <Link to="/register" className="auth-link">
@@ -209,6 +212,31 @@ export default function Login() {
               </p>
             </div>
           </form>
+        </div>
+      </div>
+      {/* Right: App info & animated circuit design */}
+      <div className="auth-fixed-right">
+        <div className="auth-circuit-bg" />
+        <div className="auth-app-info">
+          {/* You can keep or further customize this panel */}
+          <h2 style={{ color: '#00ffff', marginBottom: '0.7rem', fontWeight: 700, fontSize: '1.6rem' }}>
+            Energy Exchange
+          </h2>
+          <p>
+            <b>Trade renewable energy credits</b> on a secure, transparent, and decentralized marketplace.
+          </p>
+          <p>
+            <b>Powered by blockchain</b> and enhanced with <span style={{color:'#00ffff'}}>ZKsnarks security</span>.
+          </p>
+          <ul>
+            <li>Real-time analytics</li>
+            <li>Zero-knowledge proofs</li>
+            <li>Wallet integration</li>
+            <li>Green energy rewards</li>
+          </ul>
+          <p>
+            <span style={{color:'#00ffff'}}>Your energy. Your future.</span>
+          </p>
         </div>
       </div>
     </div>

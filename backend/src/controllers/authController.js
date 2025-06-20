@@ -2,6 +2,8 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const EmailService = require('../utils/emailService');
+const { OAuth2Client } = require('google-auth-library');
 const { validationResult } = require('express-validator');
 
 // Helper function to generate tokens
@@ -408,25 +410,41 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-// controllers/authController.js (add this method)
+
+// controllers/authController.js
+
 exports.googleAuth = async (req, res) => {
   try {
+    console.log('🔵 [GoogleAuth] Request received:', req.body);
+
     const { credential } = req.body;
+    if (!credential) {
+      console.error('🔴 [GoogleAuth] No credential sent in request!');
+      return res.status(400).json({ success: false, message: 'No credential sent' });
+    }
+
     const client = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET
     );
 
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
+    let ticket;
+    try {
+      ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      console.log('🟢 [GoogleAuth] Google token verified.');
+    } catch (err) {
+      console.error('🔴 [GoogleAuth] Google token verification failed:', err);
+      return res.status(401).json({ success: false, message: 'Google token invalid' });
+    }
 
     const payload = ticket.getPayload();
-    
+    console.log('🟢 [GoogleAuth] Payload:', payload);
+
     // Find or create user
     let user = await User.findOne({ email: payload.email });
-    
     if (!user) {
       user = new User({
         email: payload.email,
@@ -437,14 +455,17 @@ exports.googleAuth = async (req, res) => {
         avatar: payload.picture
       });
       await user.save();
+      console.log('🟢 [GoogleAuth] New user created:', user.email);
+    } else {
+      console.log('🟢 [GoogleAuth] Existing user found:', user.email);
     }
 
     const { accessToken, refreshToken } = generateTokens(user);
-    
     const userResponse = user.toObject();
     delete userResponse.password;
     delete userResponse.security;
 
+    console.log('🟢 [GoogleAuth] Sending tokens to client.');
     res.json({
       success: true,
       message: 'Google authentication successful',
@@ -453,10 +474,96 @@ exports.googleAuth = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google auth error:', error);
+    console.error('🔴 [GoogleAuth] Server error:', error);
     res.status(401).json({
       success: false,
       message: 'Google authentication failed'
+    });
+  }
+};
+
+
+const twilio = require('twilio')( 
+  process.env.TWILIO_SID,
+  process.env.TWILIO_TOKEN
+);
+
+exports.sendSMSVerification = async (phone) => {
+  await twilio.verify.services(process.env.TWILIO_SERVICE_SID)
+    .verifications
+    .create({ to: phone, channel: 'sms' });
+};
+
+const generateOTP = () => crypto.randomInt(100000, 999999).toString();
+
+exports.sendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    
+    const otp = generateOTP();
+    user.verification.email.verificationOTP = otp;
+    user.verification.email.verificationExpires = Date.now() + 600000; // 10 mins
+    
+    await user.save();
+    
+    // Send email via SendGrid
+    const emailService = new EmailService();
+    await emailService.sendOTPEmail(user.email, user.username, otp);
+
+    res.status(200).json({ success: true, message: 'OTP sent to email' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error sending OTP' });
+  }
+};
+
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // 1. Find user with matching email and valid OTP
+    const user = await User.findOne({ 
+      email,
+      'verification.email.verificationExpires': { $gt: Date.now() },
+      'verification.email.verificationOTP': otp
+    }).select('+verification.email.verificationOTP');
+
+    // 2. Check if user exists and OTP matches
+    if (!user) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired OTP' 
+      });
+    }
+
+    // 3. Update verification status
+    user.verification.email.isVerified = true;
+    user.verification.email.verificationOTP = undefined;
+    user.verification.email.verificationExpires = undefined;
+
+    // 4. Generate new tokens (important for auto-login)
+    const { accessToken, refreshToken } = generateTokens(user);
+    
+    // 5. Prepare user response without sensitive data
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.security;
+
+    // 6. Save updated user and respond
+    await user.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully',
+      user: userResponse,
+      tokens: { accessToken, refreshToken }
+    });
+
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Email verification failed. Please try again.'
     });
   }
 };

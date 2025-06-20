@@ -2,96 +2,86 @@ import api from './apiService';
 
 /**
  * AuthService handles all authentication-related API calls.
- * Uses a shared Axios instance from apiService.js.
+ * Uses a shared API service instance from apiService.js.
  */
 export const authService = {
   // Register a new user
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
+    return api.register(userData);
   },
 
   // Login with email and password
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    return response.data;
+    return api.login(credentials);
   },
 
   // Logout the current user
   logout: async () => {
-    const response = await api.post('/auth/logout');
-    return response.data;
+    return api.logout();
   },
 
   // Get the current authenticated user
   getCurrentUser: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
+    return api.getProfile();
   },
 
   // Verify email using a token
   verifyEmail: async (token) => {
-    const response = await api.get(`/auth/verify-email/${token}`);
-    return response.data;
+    return api.verifyEmail(token);
   },
 
   // Send phone verification code
   sendPhoneVerification: async (phone) => {
-    const response = await api.post('/auth/send-phone-verification', { phone });
-    return response.data;
+    return api.sendPhoneVerification(phone);
   },
 
   // Verify phone with code
   verifyPhone: async (code) => {
-    const response = await api.post('/auth/verify-phone', { code });
-    return response.data;
+    return api.verifyPhone(code);
   },
 
   // Request password reset email
   forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', { email });
-    return response.data;
+    return api.forgotPassword(email);
   },
 
   // Reset password using token
   resetPassword: async (token, password) => {
-    const response = await api.post(`/auth/reset-password/${token}`, { password });
-    return response.data;
+    return api.resetPassword(token, password);
   },
 
   // Change password for authenticated user
   changePassword: async (passwords) => {
-    const response = await api.post('/auth/change-password', passwords);
-    return response.data;
+    return api.changePassword(passwords);
   },
 
   // Register with email verification (if separate endpoint)
   registerWithVerification: async (userData) => {
-    const response = await api.post('/auth/register-with-verification', userData);
-    return response.data;
+    return api.registerWithVerification(userData);
   },
 
   // Send a new verification email
   sendVerificationEmail: async () => {
-    const response = await api.post('/auth/send-verification-email');
-    return response.data;
+    return api.sendVerificationEmail();
   },
 
   // Verify OTP code (for email/phone)
   verifyOTP: async (otp) => {
-    const response = await api.post('/auth/verify-otp', { otp });
-    return response.data;
+    return api.verifyOTP(otp);
   },
 
   // Google OAuth login
   googleAuth: async (credential) => {
-    const response = await api.post('/auth/google', { credential });
-    return response.data;
+    return api.googleAuth(credential);
   },
 
   // Resend OTP code
   resendOTP: async () => {
-    const response = await api.post('/auth/resend-otp');
-    return response.data;
+    return api.resendOTP();
+  },
+
+  // Send OTP to email
+  sendOTP: async (email) => {
+    return api.sendOTP(email);
   }
 };

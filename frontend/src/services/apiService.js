@@ -61,6 +61,7 @@ class ApiService {
     return data;
   }
 
+  
   async register(userData) {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
@@ -156,6 +157,19 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async googleAuth(credential) {
+  console.log('🟢 [apiService] Sending credential to backend:', credential?.substring?.(0, 10) + '...');
+  const response = await fetch(`${API_BASE_URL}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential })
+  });
+  const data = await this.handleResponse(response);
+  console.log('🟢 [apiService] Response from backend:', data);
+  return data;
+}
+
+
   async forgotPassword(email) {
     const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
       method: 'POST',
@@ -178,16 +192,14 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async verifyEmail(token) {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ token })
-    });
-    return this.handleResponse(response);
-  }
+ async verifyEmail(token) {
+  const response = await fetch(
+    `${API_BASE_URL}/auth/verify-email/${token}`, // Add token to URL
+    { method: 'GET' } // Change to GET
+  );
+  return this.handleResponse(response);
+}
+
 
   // Trading API calls - matching your backend trading routes
   async getMarketplaceListings(filters = {}) {

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import apiClient from '../services/apiService';
+import apiService from '../services/apiService';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -15,14 +16,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [error, setError] = useState(''); // Add error state
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  // Add clearError function
   const clearError = () => {
     setError('');
   };
 
-  // Check if user is logged in on app start
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        const response = await apiClient.getProfile();
+        const response = await apiService.getProfile();
         if (response.success) {
           setUser(response.user);
           setIsAuthenticated(true);
@@ -47,28 +47,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Unified login handler
+  const handleAuthSuccess = (response) => {
+    localStorage.setItem('token', response.tokens.accessToken);
+    setUser(response.user);
+    setIsAuthenticated(true);
+  };
+
   const login = async (formData) => {
     try {
       setIsLoading(true);
-      setError(''); // Clear previous errors
-      
-      const response = await apiClient.login({ 
-        email: formData.email, 
-        password: formData.password 
-      });
-      
+      setError('');
+      const response = await apiService.login(formData);
       if (response.success) {
-        localStorage.setItem('token', response.tokens.accessToken);
-        setUser(response.user);
-        setIsAuthenticated(true);
-        return { success: true };
-      } else {
-        setError(response.message || 'Login failed');
-        return { success: false, message: response.message };
+        handleAuthSuccess(response);
       }
+      return response;
     } catch (error) {
-      console.error('Login failed:', error);
-      setError(error.message || 'Network error. Please try again.');
+      setError(error.message || 'Login failed');
       return { success: false, message: error.message };
     } finally {
       setIsLoading(false);
@@ -78,38 +74,62 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setIsLoading(true);
-      setError(''); // Clear previous errors
-      
-      const response = await apiClient.register(userData);
-      
+      setError('');
+      const response = await apiService.register(userData);
       if (response.success) {
-        localStorage.setItem('token', response.tokens.accessToken);
-        setUser(response.user);
-        setIsAuthenticated(true);
-        return { success: true };
-      } else {
-        setError(response.message || 'Registration failed');
-        return { success: false, message: response.message };
+        handleAuthSuccess(response);
       }
+      return response;
     } catch (error) {
-      console.error('Registration failed:', error);
-      setError(error.message || 'Network error. Please try again.');
+      setError(error.message || 'Registration failed');
       return { success: false, message: error.message };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    setIsAuthenticated(false);
+    setError('');
+    navigate('/login');
+  };
+
+  const verifyEmail = async (token) => {
     try {
-      localStorage.removeItem('token');
-      setUser(null);
-      setIsAuthenticated(false);
-      setError(''); // Clear errors on logout
-      return { success: true };
+      const response = await apiService.verifyEmail(token);
+      if (response.success) {
+        checkAuthStatus();
+      }
+      return response;
     } catch (error) {
-      console.error('Logout failed:', error);
-      return { success: false, message: error.message };
+      throw error;
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    try {
+      return await apiService.resendVerificationEmail();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const googleLogin = async (credential) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const response = await apiService.googleAuth(credential);
+      if (response.success) {
+        handleAuthSuccess(response);
+      }
+      return response;
+    } catch (error) {
+      setError(error.message || 'Google authentication failed');
+      return { success: false };
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -121,8 +141,13 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    clearError, // Add clearError to the context value
-    checkAuthStatus
+    clearError,
+    checkAuthStatus,
+    verifyEmail,
+    resendVerificationEmail,
+    googleLogin,
+    setUser,
+    setIsAuthenticated
   };
 
   return (

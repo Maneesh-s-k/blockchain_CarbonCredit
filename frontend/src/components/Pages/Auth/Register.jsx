@@ -1,514 +1,252 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiZap, FiAlertTriangle, FiCheck } from 'react-icons/fi';
 import { useAuth } from '../../../context/AuthContext';
-import apiClient from '../../../services/apiService';
-import { 
-  FiZap, 
-  FiMapPin, 
-  FiInfo, 
-  FiUpload,
-  FiCheck,
-  FiAlertTriangle,
-  FiSun,
-  FiWind,
-  FiDroplet,
-  FiLoader
-} from 'react-icons/fi';
+import PasswordStrength from './PasswordStrength';
 
-export default function RegisterDevice() {
+export default function Register() {
   const [formData, setFormData] = useState({
-    deviceName: '',
-    deviceType: 'solar',
-    capacity: '',
-    location: '',
-    description: '',
-    serialNumber: '',
-    manufacturer: '',
-    model: '',
-    installationDate: '',
-    certificationFile: null
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    acceptTerms: false,
   });
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [dragActive, setDragActive] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
-  
-  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const { register, error, clearError } = useAuth();
   const navigate = useNavigate();
 
-  const deviceTypes = [
-    { value: 'solar', label: 'Solar Panel', icon: <FiSun />, emoji: '☀️' },
-    { value: 'wind', label: 'Wind Turbine', icon: <FiWind />, emoji: '💨' },
-    { value: 'hydro', label: 'Hydroelectric', icon: <FiDroplet />, emoji: '💧' },
-    { value: 'geothermal', label: 'Geothermal', icon: <FiZap />, emoji: '🌋' },
-    { value: 'biomass', label: 'Biomass', icon: <FiZap />, emoji: '🌱' }
-  ];
-
-  // Real-time validation
+  // Field validation logic
   const validateField = (name, value) => {
-    const errors = { ...validationErrors };
-
+    let errors = { ...validationErrors };
     switch (name) {
-      case 'deviceName':
-        if (!value.trim()) {
-          errors.deviceName = 'Device name is required';
-        } else if (value.length > 100) {
-          errors.deviceName = 'Device name cannot exceed 100 characters';
-        } else {
-          delete errors.deviceName;
-        }
+      case 'username':
+        if (!/^[a-zA-Z0-9_]{3,30}$/.test(value))
+          errors.username = '3-30 chars, letters/numbers/_ only';
+        else delete errors.username;
         break;
-
-      case 'capacity':
-        const capacityNum = parseFloat(value);
-        if (!value) {
-          errors.capacity = 'Capacity is required';
-        } else if (isNaN(capacityNum)) {
-          errors.capacity = 'Capacity must be a number';
-        } else if (capacityNum < 0.1) {
-          errors.capacity = 'Minimum capacity is 0.1 kW';
-        } else if (capacityNum > 10000) {
-          errors.capacity = 'Maximum capacity is 10,000 kW';
-        } else {
-          delete errors.capacity;
-        }
+      case 'email':
+        if (!/^\S+@\S+\.\S+$/.test(value))
+          errors.email = 'Invalid email format';
+        else delete errors.email;
         break;
-
-      case 'location':
-        if (!value.trim()) {
-          errors.location = 'Location is required';
-        } else if (value.length > 200) {
-          errors.location = 'Location cannot exceed 200 characters';
-        } else {
-          delete errors.location;
-        }
+      case 'password':
+        if (value.length < 6)
+          errors.password = 'Minimum 6 characters';
+        else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value))
+          errors.password = 'Requires upper, lower, and number';
+        else delete errors.password;
         break;
-
-      case 'description':
-        if (value && value.length > 500) {
-          errors.description = 'Description cannot exceed 500 characters';
-        } else {
-          delete errors.description;
-        }
+      case 'confirmPassword':
+        if (value !== formData.password)
+          errors.confirmPassword = 'Passwords do not match';
+        else delete errors.confirmPassword;
         break;
-
+      case 'acceptTerms':
+        if (!value)
+          errors.acceptTerms = 'You must accept terms';
+        else delete errors.acceptTerms;
+        break;
       default:
         break;
     }
-
     setValidationErrors(errors);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Clear message when user starts typing
-    if (message.text) {
-      setMessage({ type: '', text: '' });
-    }
-
-    // Real-time validation
-    validateField(name, value);
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const fieldValue = type === 'checkbox' ? checked : value;
+    setFormData((prev) => ({ ...prev, [name]: fieldValue }));
+    validateField(name, fieldValue);
+    if (error) clearError();
   };
 
-  const handleFileUpload = (file) => {
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      setMessage({ type: 'error', text: 'Only PDF and image files are allowed.' });
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'File size cannot exceed 10MB.' });
-      return;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      certificationFile: file
-    }));
-    setMessage({ type: 'success', text: `File "${file.name}" uploaded successfully!` });
-  };
-
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
-    }
-  };
-
+  // Handle registration form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate all required fields
-    const requiredFields = ['deviceName', 'deviceType', 'capacity', 'location'];
-    let hasErrors = false;
-
-    requiredFields.forEach(field => {
-      if (!formData[field]) {
-        validateField(field, formData[field]);
-        hasErrors = true;
-      }
-    });
-
-    if (hasErrors || Object.keys(validationErrors).length > 0) {
-      setMessage({ type: 'error', text: 'Please fix all validation errors before submitting.' });
-      return;
-    }
-
+    Object.entries(formData).forEach(([name, value]) => validateField(name, value));
+    if (Object.keys(validationErrors).length > 0) return;
     setIsLoading(true);
-    setMessage({ type: '', text: '' });
-
     try {
-      // Prepare form data for API
-      const submitData = new FormData();
-      
-      // Append all form fields
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') {
-          submitData.append(key, formData[key]);
-        }
+      const result = await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
       });
-
-      const response = await apiClient.registerDevice(submitData);
-
-      if (response.success) {
-        setMessage({ 
-          type: 'success', 
-          text: 'Device registered successfully! It will be reviewed within 24-48 hours.' 
-        });
-        
-        // Reset form after successful submission
+      if (result.success) {
+        setRegistrationSuccess(true);
         setTimeout(() => {
-          navigate('/devices');
-        }, 2000);
-      } else {
-        setMessage({ type: 'error', text: response.message || 'Failed to register device' });
+          navigate('/verify-email', { state: { email: formData.email, newRegistration: true } });
+        }, 1200);
       }
-    } catch (error) {
-      console.error('Device registration error:', error);
-      setMessage({ type: 'error', text: error.message || 'Network error. Please try again.' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const selectedDeviceType = deviceTypes.find(type => type.value === formData.deviceType);
-
   return (
-    <div className="register-device-page">
-      <div className="register-device-container">
-        {/* Header */}
-        <div className="page-header">
-          <div className="header-content">
-            <h1>Register Energy Device</h1>
-            <p>Add your renewable energy device to start trading energy credits</p>
+    <div className="register-scroll-center-root">
+      <div className="register-scroll-center-card">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <FiZap className="auth-logo-icon" />
+            <span className="auth-logo-text">Energy Exchange</span>
           </div>
-          <div className="device-type-preview">
-            <span className="device-emoji">{selectedDeviceType?.emoji}</span>
-            <span className="device-type-name">{selectedDeviceType?.label}</span>
-          </div>
+          <div className="auth-title">Create Account</div>
+          <div className="auth-subtitle">Join the renewable energy marketplace</div>
         </div>
 
-        {/* Message Display */}
-        {message.text && (
-          <div className={`message-banner ${message.type}`}>
-            {message.type === 'success' ? <FiCheck /> : <FiAlertTriangle />}
-            <span>{message.text}</span>
-            <button onClick={() => setMessage({ type: '', text: '' })}>×</button>
+        {registrationSuccess ? (
+          <div className="info-message">
+            <FiCheck className="success-icon" />
+            Registration successful! Please check your email for the OTP to verify your account.
           </div>
-        )}
-
-        {/* Registration Form */}
-        <div className="registration-form-card">
-          <form onSubmit={handleSubmit} className="registration-form">
-            {/* Device Basic Info */}
-            <div className="form-section">
-              <h3 className="section-title">
-                <FiZap />
-                Device Information
-              </h3>
-              
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="deviceName">Device Name *</label>
+        ) : (
+          <>
+            {error && (
+              <div className="error-message">
+                <FiAlertTriangle className="error-icon" /> {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
+              <div className="form-group">
+                <label htmlFor="username" className="form-label">Username</label>
+                <div className="input-wrapper">
+                  <FiUser className="input-icon" />
                   <input
                     type="text"
-                    id="deviceName"
-                    name="deviceName"
-                    value={formData.deviceName}
-                    onChange={handleInputChange}
-                    placeholder="My Solar Panel System"
-                    className={validationErrors.deviceName ? 'error' : ''}
+                    name="username"
+                    id="username"
+                    className={`form-input${validationErrors.username ? ' error' : ''}`}
+                    placeholder="energy_trader_01"
+                    value={formData.username}
+                    onChange={handleChange}
                     required
                   />
-                  {validationErrors.deviceName && (
-                    <span className="error-text">{validationErrors.deviceName}</span>
-                  )}
                 </div>
-                
-                <div className="form-group">
-                  <label htmlFor="deviceType">Device Type *</label>
-                  <select
-                    id="deviceType"
-                    name="deviceType"
-                    value={formData.deviceType}
-                    onChange={handleInputChange}
+                {validationErrors.username && (
+                  <div className="field-error">{validationErrors.username}</div>
+                )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="email" className="form-label">Email</label>
+                <div className="input-wrapper">
+                  <FiMail className="input-icon" />
+                  <input
+                    type="email"
+                    name="email"
+                    id="email"
+                    className={`form-input${validationErrors.email ? ' error' : ''}`}
+                    placeholder="user@energy.io"
+                    value={formData.email}
+                    onChange={handleChange}
                     required
+                  />
+                </div>
+                {validationErrors.email && (
+                  <div className="field-error">{validationErrors.email}</div>
+                )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="password" className="form-label">Password</label>
+                <div className="input-wrapper">
+                  <FiLock className="input-icon" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    id="password"
+                    className={`form-input${validationErrors.password ? ' error' : ''}`}
+                    placeholder="Create a strong password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
                   >
-                    {deviceTypes.map(type => (
-                      <option key={type.value} value={type.value}>
-                        {type.emoji} {type.label}
-                      </option>
-                    ))}
-                  </select>
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
                 </div>
+                <PasswordStrength password={formData.password} />
+                {validationErrors.password && (
+                  <div className="field-error">{validationErrors.password}</div>
+                )}
               </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="capacity">Capacity (kW) *</label>
+              <div className="form-group">
+                <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+                <div className="input-wrapper">
+                  <FiLock className="input-icon" />
                   <input
-                    type="number"
-                    id="capacity"
-                    name="capacity"
-                    value={formData.capacity}
-                    onChange={handleInputChange}
-                    placeholder="5.5"
-                    step="0.1"
-                    min="0.1"
-                    max="10000"
-                    className={validationErrors.capacity ? 'error' : ''}
+                    type={showConfirm ? 'text' : 'password'}
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    className={`form-input${validationErrors.confirmPassword ? ' error' : ''}`}
+                    placeholder="Re-enter your password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
                     required
                   />
-                  {validationErrors.capacity && (
-                    <span className="error-text">{validationErrors.capacity}</span>
-                  )}
-                  <small>Enter the maximum power output in kilowatts</small>
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    tabIndex={-1}
+                    onClick={() => setShowConfirm((v) => !v)}
+                  >
+                    {showConfirm ? <FiEyeOff /> : <FiEye />}
+                  </button>
                 </div>
-                
-                <div className="form-group">
-                  <label htmlFor="manufacturer">Manufacturer</label>
-                  <input
-                    type="text"
-                    id="manufacturer"
-                    name="manufacturer"
-                    value={formData.manufacturer}
-                    onChange={handleInputChange}
-                    placeholder="Tesla, SunPower, etc."
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="model">Model</label>
-                  <input
-                    type="text"
-                    id="model"
-                    name="model"
-                    value={formData.model}
-                    onChange={handleInputChange}
-                    placeholder="Model number or name"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="serialNumber">Serial Number</label>
-                  <input
-                    type="text"
-                    id="serialNumber"
-                    name="serialNumber"
-                    value={formData.serialNumber}
-                    onChange={handleInputChange}
-                    placeholder="ABC123XYZ789"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="installationDate">Installation Date</label>
-                <input
-                  type="date"
-                  id="installationDate"
-                  name="installationDate"
-                  value={formData.installationDate}
-                  onChange={handleInputChange}
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-            </div>
-
-            {/* Location Info */}
-            <div className="form-section">
-              <h3 className="section-title">
-                <FiMapPin />
-                Location Details
-              </h3>
-              
-              <div className="form-group">
-                <label htmlFor="location">Installation Location *</label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="123 Main St, City, State, ZIP"
-                  className={validationErrors.location ? 'error' : ''}
-                  required
-                />
-                {validationErrors.location && (
-                  <span className="error-text">{validationErrors.location}</span>
+                {validationErrors.confirmPassword && (
+                  <div className="field-error">{validationErrors.confirmPassword}</div>
                 )}
-                <small>Provide the complete address where the device is installed</small>
               </div>
-            </div>
-
-            {/* Description */}
-            <div className="form-section">
-              <h3 className="section-title">
-                <FiInfo />
-                Additional Information
-              </h3>
-              
-              <div className="form-group">
-                <label htmlFor="description">Description (Optional)</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Additional details about your device setup, orientation, special features, etc."
-                  rows="4"
-                  maxLength="500"
-                  className={validationErrors.description ? 'error' : ''}
-                />
-                <div className="char-count">
-                  <span className={formData.description.length > 450 ? 'warning' : ''}>
-                    {formData.description.length}/500 characters
+              <div className="form-group form-options">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="acceptTerms"
+                    className="checkbox-input"
+                    checked={formData.acceptTerms}
+                    onChange={handleChange}
+                    required
+                  />
+                  <span className="checkbox-text">
+                    I agree to the <Link to="/terms" className="link-text">Terms of Service</Link>
                   </span>
-                </div>
-                {validationErrors.description && (
-                  <span className="error-text">{validationErrors.description}</span>
+                </label>
+                {validationErrors.acceptTerms && (
+                  <div className="field-error">{validationErrors.acceptTerms}</div>
                 )}
               </div>
-            </div>
-
-            {/* File Upload */}
-            <div className="form-section">
-              <h3 className="section-title">
-                <FiUpload />
-                Certification Documents
-              </h3>
-              
-              <div 
-                className={`file-upload-area ${dragActive ? 'drag-active' : ''}`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
+              <button
+                type="submit"
+                className="auth-button primary"
+                disabled={isLoading || Object.keys(validationErrors).length > 0}
               >
-                <FiUpload className="upload-icon" />
-                <p>
-                  {formData.certificationFile 
-                    ? `Selected: ${formData.certificationFile.name}`
-                    : 'Drag and drop your certification PDF here, or click to browse'
-                  }
-                </p>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => handleFileUpload(e.target.files[0])}
-                  style={{ display: 'none' }}
-                  id="file-upload"
-                />
-                <label htmlFor="file-upload" className="upload-button">
-                  Choose File
-                </label>
-              </div>
-              <small>Upload installation certificates, warranties, or compliance documents (PDF, JPG, PNG - Max 10MB)</small>
+                {isLoading ? (
+                  <span className="button-loading">
+                    <span className="spinner-small" /> Creating Account...
+                  </span>
+                ) : (
+                  'Register'
+                )}
+              </button>
+            </form>
+            <div className="auth-divider">
+              <span>Already have an account?</span>
             </div>
-
-            {/* Submit Button */}
-            <button 
-              type="submit" 
-              className="submit-button"
-              disabled={isLoading || Object.keys(validationErrors).length > 0}
-            >
-              {isLoading ? (
-                <>
-                  <FiLoader className="spinning" />
-                  Registering Device...
-                </>
-              ) : (
-                <>
-                  <FiCheck />
-                  Register Device
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Info Panel */}
-        <div className="info-panel">
-          <h4>Registration Process</h4>
-          <div className="process-steps">
-            <div className="step">
-              <div className="step-number">1</div>
-              <div className="step-content">
-                <h5>Submit Application</h5>
-                <p>Fill out the device registration form with accurate information</p>
-              </div>
-            </div>
-            <div className="step">
-              <div className="step-number">2</div>
-              <div className="step-content">
-                <h5>Verification</h5>
-                <p>Our team will verify your device specifications and documentation within 24-48 hours</p>
-              </div>
-            </div>
-            <div className="step">
-              <div className="step-number">3</div>
-              <div className="step-content">
-                <h5>Approval & Trading</h5>
-                <p>Once approved, you can start trading energy credits immediately</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="help-section">
-            <h5>Need Help?</h5>
-            <p>
-              Contact our support team if you have questions about device registration
-              or need assistance with the verification process.
-            </p>
-            <button className="help-button">Contact Support</button>
-          </div>
-        </div>
+            <Link to="/login" className="auth-button secondary">
+              Sign In Instead
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
