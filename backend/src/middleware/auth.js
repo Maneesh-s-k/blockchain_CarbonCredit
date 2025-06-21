@@ -24,10 +24,18 @@ exports.authenticate = async (req, res, next) => {
     
     const user = await User.findById(decoded.userId);
     
-    if (!user || !user.isActive) {
+    // Critical security fix: Check if user exists in database
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token or user not found'
+        message: 'User account not found'
+      });
+    }
+    
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is inactive'
       });
     }
 

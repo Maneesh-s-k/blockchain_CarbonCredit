@@ -1,30 +1,84 @@
-const sgMail = require('@sendgrid/mail');
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
 class EmailService {
   constructor() {
-    // Use a verified sender email - MUST be verified in SendGrid dashboard
-    this.fromEmail = process.env.SENDGRID_FROM_EMAIL || 'noreply@yourdomain.com';
-    this.fromName = 'Energy Trading Platform';
+    this.mailerSend = new MailerSend({
+      apiKey: process.env.MAILERSEND_API_KEY,
+    });
+    this.fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'noreply@test-zxk54v879m1ljy6v.mlsender.net';
+    this.fromName = 'Energy Exchange';
   }
 
-  // Send email verification
+  // Send OTP email for verification
+  async sendOTPEmail(email, username, otp) {
+    try {
+      const emailParams = new EmailParams()
+        .setFrom(new Sender(this.fromEmail, this.fromName))
+        .setTo([new Recipient(email, username)])
+        .setSubject('Your Energy Exchange Verification Code')
+        .setHtml(`
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; border-radius: 10px; font-family: Arial, sans-serif;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #38bdf8; margin: 0; font-size: 28px;">⚡ Energy Exchange</h1>
+            </div>
+            
+            <div style="background: #1e293b; padding: 25px; border-radius: 8px; margin: 20px 0;">
+              <h2 style="color: #38bdf8; text-align: center; margin-top: 0;">Email Verification</h2>
+              <p style="color: #cbd5e1; font-size: 16px; margin-bottom: 20px;">Hi ${username},</p>
+              <p style="color: #cbd5e1; margin-bottom: 25px;">Your verification code is:</p>
+              
+              <div style="background: #0f172a; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #38bdf8;">
+                <h1 style="color: #38bdf8; font-size: 36px; letter-spacing: 4px; margin: 0; font-weight: bold;">${otp}</h1>
+              </div>
+              
+              <p style="color: #94a3b8; font-size: 14px; text-align: center; margin-top: 25px; margin-bottom: 0;">
+                This code will expire in 10 minutes. If you didn't request this verification, please ignore this email.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+              <p style="color: #64748b; font-size: 12px; margin: 0;">
+                © 2025 Energy Exchange. All rights reserved.
+              </p>
+            </div>
+          </div>
+        `)
+        .setText(`
+          Energy Exchange - Email Verification
+          
+          Hi ${username},
+          
+          Your verification code is: ${otp}
+          
+          This code will expire in 10 minutes.
+          
+          If you didn't request this verification, please ignore this email.
+          
+          © 2025 Energy Exchange
+        `);
+
+      const response = await this.mailerSend.email.send(emailParams);
+      console.log('✅ OTP email sent successfully via MailerSend');
+      return response;
+    } catch (error) {
+      console.error('❌ MailerSend OTP error:', error);
+      throw error;
+    }
+  }
+
+  // Send email verification (link-based)
   async sendEmailVerification(email, username, verificationToken) {
     try {
       const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-email/${verificationToken}`;
       
-      const msg = {
-        to: email,
-        from: {
-          email: this.fromEmail,
-          name: this.fromName
-        },
-        subject: 'Verify Your Email - Energy Trading Platform',
-        html: `
+      const emailParams = new EmailParams()
+        .setFrom(new Sender(this.fromEmail, this.fromName))
+        .setTo([new Recipient(email, username)])
+        .setSubject('Verify Your Email - Energy Exchange')
+        .setHtml(`
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">⚡ Energy Trading Platform</h1>
+              <h1 style="color: white; margin: 0;">⚡ Energy Exchange</h1>
             </div>
             <div style="padding: 30px; background: #f9fafb;">
               <h2 style="color: #1f2937;">Welcome ${username}!</h2>
@@ -49,98 +103,94 @@ class EmailService {
             </div>
             <div style="background: #1f2937; padding: 20px; text-align: center;">
               <p style="color: #9ca3af; margin: 0; font-size: 14px;">
-                © 2025 Energy Trading Platform. All rights reserved.
+                © 2025 Energy Exchange. All rights reserved.
               </p>
             </div>
           </div>
-        `
-      };
+        `);
 
-      await sgMail.send(msg);
-      console.log('✅ Email verification sent successfully to:', email);
-      return true;
+      const response = await this.mailerSend.email.send(emailParams);
+      console.log('✅ Email verification sent successfully via MailerSend to:', email);
+      return response;
     } catch (error) {
-      console.error('❌ SendGrid email verification error:', error);
-      if (error.response && error.response.body && error.response.body.errors) {
-        console.error('SendGrid error details:', error.response.body.errors);
-      }
+      console.error('❌ MailerSend verification error:', error);
       throw new Error('Failed to send verification email');
     }
   }
 
   // Send password reset email
-  async sendPasswordReset(email, username, resetToken) {
-    try {
-      const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
-      
-      const msg = {
-        to: email,
-        from: {
-          email: this.fromEmail,
-          name: this.fromName
-        },
-        subject: 'Password Reset Request - Energy Trading Platform',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">🔒 Password Reset</h1>
-            </div>
-            <div style="padding: 30px; background: #f9fafb;">
-              <h2 style="color: #1f2937;">Hello ${username},</h2>
-              <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-                We received a request to reset your password. If you didn't make this request, 
-                please ignore this email and your password will remain unchanged.
-              </p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" 
-                   style="background: #ef4444; color: white; padding: 12px 30px; text-decoration: none; 
-                          border-radius: 8px; font-weight: bold; display: inline-block;">
-                  Reset Password
-                </a>
-              </div>
-              <p style="color: #6b7280; font-size: 14px;">
-                If the button doesn't work, copy and paste this link into your browser:<br>
-                <a href="${resetUrl}" style="color: #ef4444;">${resetUrl}</a>
-              </p>
-              <p style="color: #dc2626; font-size: 14px; font-weight: bold;">
-                ⚠️ This reset link will expire in 10 minutes for security reasons.
-              </p>
-            </div>
-            <div style="background: #1f2937; padding: 20px; text-align: center;">
-              <p style="color: #9ca3af; margin: 0; font-size: 14px;">
-                © 2025 Energy Trading Platform. All rights reserved.
-              </p>
-            </div>
+ // Send password reset OTP email
+async sendPasswordResetOTP(email, username, otp) {
+  try {
+    const emailParams = new EmailParams()
+      .setFrom(new Sender(this.fromEmail, this.fromName))
+      .setTo([new Recipient(email, username)])
+      .setSubject('Password Reset Code - Energy Exchange')
+      .setHtml(`
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; border-radius: 10px; font-family: Arial, sans-serif;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #ef4444; margin: 0; font-size: 28px;">🔒 Password Reset</h1>
           </div>
-        `
-      };
+          
+          <div style="background: #1e293b; padding: 25px; border-radius: 8px; margin: 20px 0;">
+            <h2 style="color: #ef4444; text-align: center; margin-top: 0;">Reset Your Password</h2>
+            <p style="color: #cbd5e1; font-size: 16px; margin-bottom: 20px;">Hi ${username},</p>
+            <p style="color: #cbd5e1; margin-bottom: 25px;">You requested to reset your password. Your verification code is:</p>
+            
+            <div style="background: #0f172a; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #ef4444;">
+              <h1 style="color: #ef4444; font-size: 36px; letter-spacing: 4px; margin: 0; font-weight: bold;">${otp}</h1>
+            </div>
+            
+            <p style="color: #94a3b8; font-size: 14px; text-align: center; margin-top: 25px; margin-bottom: 15px;">
+              This code will expire in 10 minutes for security reasons.
+            </p>
+            
+            <p style="color: #fbbf24; font-size: 14px; text-align: center; margin-bottom: 0;">
+              ⚠️ If you didn't request this password reset, please ignore this email and your password will remain unchanged.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px;">
+            <p style="color: #64748b; font-size: 12px; margin: 0;">
+              © 2025 Energy Exchange. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `)
+      .setText(`
+        Energy Exchange - Password Reset
+        
+        Hi ${username},
+        
+        You requested to reset your password. Your verification code is: ${otp}
+        
+        This code will expire in 10 minutes for security reasons.
+        
+        If you didn't request this password reset, please ignore this email.
+        
+        © 2025 Energy Exchange
+      `);
 
-      await sgMail.send(msg);
-      console.log('✅ Password reset email sent successfully to:', email);
-      return true;
-    } catch (error) {
-      console.error('❌ SendGrid password reset error:', error);
-      if (error.response && error.response.body && error.response.body.errors) {
-        console.error('SendGrid error details:', error.response.body.errors);
-      }
-      throw new Error('Failed to send password reset email');
-    }
+    const response = await this.mailerSend.email.send(emailParams);
+    console.log('✅ Password reset OTP email sent successfully via MailerSend');
+    return response;
+  } catch (error) {
+    console.error('❌ MailerSend password reset OTP error:', error);
+    throw error;
   }
+}
 
   // Send welcome email after verification
   async sendWelcomeEmail(email, username) {
     try {
-      const msg = {
-        to: email,
-        from: {
-          email: this.fromEmail,
-          name: this.fromName
-        },
-        subject: 'Welcome to Energy Trading Platform! 🎉',
-        html: `
+      const emailParams = new EmailParams()
+        .setFrom(new Sender(this.fromEmail, this.fromName))
+        .setTo([new Recipient(email, username)])
+        .setSubject('Welcome to Energy Exchange! 🎉')
+        .setHtml(`
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">🎉 Welcome to Energy Trading!</h1>
+              <h1 style="color: white; margin: 0;">🎉 Welcome to Energy Exchange!</h1>
             </div>
             <div style="padding: 30px; background: #f9fafb;">
               <h2 style="color: #1f2937;">Congratulations ${username}!</h2>
@@ -163,21 +213,17 @@ class EmailService {
             </div>
             <div style="background: #1f2937; padding: 20px; text-align: center;">
               <p style="color: #9ca3af; margin: 0; font-size: 14px;">
-                © 2025 Energy Trading Platform. All rights reserved.
+                © 2025 Energy Exchange. All rights reserved.
               </p>
             </div>
           </div>
-        `
-      };
+        `);
 
-      await sgMail.send(msg);
-      console.log('✅ Welcome email sent successfully to:', email);
-      return true;
+      const response = await this.mailerSend.email.send(emailParams);
+      console.log('✅ Welcome email sent successfully via MailerSend to:', email);
+      return response;
     } catch (error) {
-      console.error('❌ SendGrid welcome email error:', error);
-      if (error.response && error.response.body && error.response.body.errors) {
-        console.error('SendGrid error details:', error.response.body.errors);
-      }
+      console.error('❌ MailerSend welcome email error:', error);
       throw new Error('Failed to send welcome email');
     }
   }
@@ -185,14 +231,11 @@ class EmailService {
   // Send security alert email
   async sendSecurityAlert(email, username, alertType, details) {
     try {
-      const msg = {
-        to: email,
-        from: {
-          email: this.fromEmail,
-          name: this.fromName
-        },
-        subject: `Security Alert - ${alertType}`,
-        html: `
+      const emailParams = new EmailParams()
+        .setFrom(new Sender(this.fromEmail, this.fromName))
+        .setTo([new Recipient(email, username)])
+        .setSubject(`Security Alert - ${alertType}`)
+        .setHtml(`
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; text-align: center;">
               <h1 style="color: white; margin: 0;">🔐 Security Alert</h1>
@@ -221,54 +264,20 @@ class EmailService {
             </div>
             <div style="background: #1f2937; padding: 20px; text-align: center;">
               <p style="color: #9ca3af; margin: 0; font-size: 14px;">
-                © 2025 Energy Trading Platform. All rights reserved.
+                © 2025 Energy Exchange. All rights reserved.
               </p>
             </div>
           </div>
-        `
-      };
+        `);
 
-      await sgMail.send(msg);
-      console.log('✅ Security alert email sent successfully to:', email);
-      return true;
+      const response = await this.mailerSend.email.send(emailParams);
+      console.log('✅ Security alert email sent successfully via MailerSend to:', email);
+      return response;
     } catch (error) {
-      console.error('❌ SendGrid security alert error:', error);
-      if (error.response && error.response.body && error.response.body.errors) {
-        console.error('SendGrid error details:', error.response.body.errors);
-      }
+      console.error('❌ MailerSend security alert error:', error);
       throw new Error('Failed to send security alert email');
     }
   }
-
-  async sendOTPEmail(email, username, otp) {
-  try {
-    const msg = {
-      to: email,
-      from: { 
-        email: this.fromEmail,
-        name: this.fromName 
-      },
-      subject: 'Your Verification OTP',
-      html: `
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-          <h2 style="color: #2d3748;">Hello ${username},</h2>
-          <p style="font-size: 16px; color: #4a5568;">
-            Your verification code is: 
-            <strong style="font-size: 24px; color: #4299e1;">${otp}</strong>
-          </p>
-          <p style="font-size: 14px; color: #718096;">
-            This code will expire in 10 minutes. If you didn't request this, please ignore this email.
-          </p>
-        </div>
-      `
-    };
-    await sgMail.send(msg);
-  } catch (error) {
-    console.error('Error sending OTP email:', error);
-    throw error;
-  }
 }
 
-}
-
-module.exports = new EmailService();
+module.exports = EmailService;

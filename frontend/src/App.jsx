@@ -20,9 +20,13 @@ function App() {
           <div className="App">
             <Routes>
               {/* Public Routes */}
+              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              
+              <Route path="/test" element={<ApiTest />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route 
                 path="/*" 
                 element={
@@ -31,10 +35,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
-              <Route path="/test" element={<ApiTest />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
-              <Route path="/verify-email/:token" element={<VerifyEmail />} /> 
+              
             </Routes>
           </div>
         </WalletProvider>

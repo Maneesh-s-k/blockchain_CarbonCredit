@@ -37,11 +37,15 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
         } else {
           localStorage.removeItem('token');
+          setUser(null);
+          setIsAuthenticated(false);
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('token');
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -50,8 +54,12 @@ export const AuthProvider = ({ children }) => {
   // Unified login handler
   const handleAuthSuccess = (response) => {
     localStorage.setItem('token', response.tokens.accessToken);
+    if (response.tokens.refreshToken) {
+      localStorage.setItem('refreshToken', response.tokens.refreshToken);
+    }
     setUser(response.user);
     setIsAuthenticated(true);
+    setError('');
   };
 
   const login = async (formData) => {
@@ -71,14 +79,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ FIXED: Registration - does NOT log in user
   const register = async (userData) => {
     try {
       setIsLoading(true);
       setError('');
       const response = await apiService.register(userData);
-      if (response.success) {
-        handleAuthSuccess(response);
-      }
+      // ✅ CRITICAL: Do NOT log in user here; just return response
       return response;
     } catch (error) {
       setError(error.message || 'Registration failed');
@@ -90,6 +97,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     setUser(null);
     setIsAuthenticated(false);
     setError('');
@@ -133,6 +141,82 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // ✅ FIXED: OTP verification - logs in user AFTER verification
+  const verifyOTP = async (data) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const response = await apiService.verifyOTP(data);
+      if (response.success) {
+        // ✅ ONLY log in user after successful OTP verification
+        handleAuthSuccess(response);
+      }
+      return response;
+    } catch (error) {
+      setError(error.message || 'OTP verification failed');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ FIXED: Resend OTP method - proper parameter handling
+  const resendOTP = async (data) => {
+    try {
+      setError('');
+      const response = await apiService.sendOTP(data);
+      return response;
+    } catch (error) {
+      setError(error.message || 'Failed to resend OTP');
+      throw error;
+    }
+  };
+
+  // ✅ NEW: Password reset methods
+  const forgotPassword = async (email) => {
+    try {
+      setError('');
+      const response = await apiService.forgotPassword(email);
+      return response;
+    } catch (error) {
+      setError(error.message || 'Failed to send reset code');
+      throw error;
+    }
+  };
+
+  const verifyPasswordResetOTP = async (data) => {
+    try {
+      setError('');
+      const response = await apiService.verifyPasswordResetOTP(data);
+      return response;
+    } catch (error) {
+      setError(error.message || 'Invalid reset code');
+      throw error;
+    }
+  };
+
+  const resetPassword = async (data) => {
+    try {
+      setError('');
+      const response = await apiService.resetPassword(data);
+      return response;
+    } catch (error) {
+      setError(error.message || 'Failed to reset password');
+      throw error;
+    }
+  };
+
+  const resendPasswordResetOTP = async (data) => {
+    try {
+      setError('');
+      const response = await apiService.resendPasswordResetOTP(data);
+      return response;
+    } catch (error) {
+      setError(error.message || 'Failed to resend code');
+      throw error;
+    }
+  };
+
   const value = {
     user,
     isLoading,
@@ -146,8 +230,15 @@ export const AuthProvider = ({ children }) => {
     verifyEmail,
     resendVerificationEmail,
     googleLogin,
+    verifyOTP,
+    resendOTP,
     setUser,
-    setIsAuthenticated
+    setIsAuthenticated,
+    // ✅ NEW: Password reset methods added
+    forgotPassword,
+    verifyPasswordResetOTP,
+    resetPassword,
+    resendPasswordResetOTP
   };
 
   return (

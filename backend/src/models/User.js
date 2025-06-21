@@ -179,8 +179,9 @@ const userSchema = new mongoose.Schema({
       default: 0
     },
     lockUntil: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date
+    passwordResetOTP: String,
+    passwordResetExpires: Date,
+    passwordResetToken: String
   },
   statistics: {
     totalDevices: {

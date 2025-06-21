@@ -16,7 +16,6 @@ export default function Register() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { register, error, clearError } = useAuth();
   const navigate = useNavigate();
 
@@ -66,24 +65,43 @@ export default function Register() {
     if (error) clearError();
   };
 
-  // Handle registration form submission
+  // ✅ CRITICAL FIX: Handle registration form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate all fields
     Object.entries(formData).forEach(([name, value]) => validateField(name, value));
     if (Object.keys(validationErrors).length > 0) return;
+    
     setIsLoading(true);
+    
     try {
+      console.log('🚀 Starting registration process...');
+      
       const result = await register({
         username: formData.username,
         email: formData.email,
         password: formData.password,
       });
+      
+      console.log('📝 Registration result:', result);
+      
       if (result.success) {
-        setRegistrationSuccess(true);
-        setTimeout(() => {
-          navigate('/verify-email', { state: { email: formData.email, newRegistration: true } });
-        }, 1200);
+        console.log('✅ Registration successful, navigating to verify-email...');
+        
+        // ✅ IMMEDIATE NAVIGATION - No delay, no success state
+        navigate('/verify-email', { 
+          state: { 
+            email: formData.email, 
+            newRegistration: true 
+          },
+          replace: true // Prevent going back to registration
+        });
+      } else {
+        console.error('❌ Registration failed:', result.message);
       }
+    } catch (err) {
+      console.error('❌ Registration error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -101,152 +119,150 @@ export default function Register() {
           <div className="auth-subtitle">Join the renewable energy marketplace</div>
         </div>
 
-        {registrationSuccess ? (
-          <div className="info-message">
-            <FiCheck className="success-icon" />
-            Registration successful! Please check your email for the OTP to verify your account.
+        {error && (
+          <div className="error-message">
+            <FiAlertTriangle className="error-icon" /> {error}
           </div>
-        ) : (
-          <>
-            {error && (
-              <div className="error-message">
-                <FiAlertTriangle className="error-icon" /> {error}
-              </div>
-            )}
-            <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
-              <div className="form-group">
-                <label htmlFor="username" className="form-label">Username</label>
-                <div className="input-wrapper">
-                  <FiUser className="input-icon" />
-                  <input
-                    type="text"
-                    name="username"
-                    id="username"
-                    className={`form-input${validationErrors.username ? ' error' : ''}`}
-                    placeholder="energy_trader_01"
-                    value={formData.username}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                {validationErrors.username && (
-                  <div className="field-error">{validationErrors.username}</div>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">Email</label>
-                <div className="input-wrapper">
-                  <FiMail className="input-icon" />
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    className={`form-input${validationErrors.email ? ' error' : ''}`}
-                    placeholder="user@energy.io"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                {validationErrors.email && (
-                  <div className="field-error">{validationErrors.email}</div>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">Password</label>
-                <div className="input-wrapper">
-                  <FiLock className="input-icon" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    id="password"
-                    className={`form-input${validationErrors.password ? ' error' : ''}`}
-                    placeholder="Create a strong password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    tabIndex={-1}
-                    onClick={() => setShowPassword((v) => !v)}
-                  >
-                    {showPassword ? <FiEyeOff /> : <FiEye />}
-                  </button>
-                </div>
-                <PasswordStrength password={formData.password} />
-                {validationErrors.password && (
-                  <div className="field-error">{validationErrors.password}</div>
-                )}
-              </div>
-              <div className="form-group">
-                <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
-                <div className="input-wrapper">
-                  <FiLock className="input-icon" />
-                  <input
-                    type={showConfirm ? 'text' : 'password'}
-                    name="confirmPassword"
-                    id="confirmPassword"
-                    className={`form-input${validationErrors.confirmPassword ? ' error' : ''}`}
-                    placeholder="Re-enter your password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    tabIndex={-1}
-                    onClick={() => setShowConfirm((v) => !v)}
-                  >
-                    {showConfirm ? <FiEyeOff /> : <FiEye />}
-                  </button>
-                </div>
-                {validationErrors.confirmPassword && (
-                  <div className="field-error">{validationErrors.confirmPassword}</div>
-                )}
-              </div>
-              <div className="form-group form-options">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="acceptTerms"
-                    className="checkbox-input"
-                    checked={formData.acceptTerms}
-                    onChange={handleChange}
-                    required
-                  />
-                  <span className="checkbox-text">
-                    I agree to the <Link to="/terms" className="link-text">Terms of Service</Link>
-                  </span>
-                </label>
-                {validationErrors.acceptTerms && (
-                  <div className="field-error">{validationErrors.acceptTerms}</div>
-                )}
-              </div>
-              <button
-                type="submit"
-                className="auth-button primary"
-                disabled={isLoading || Object.keys(validationErrors).length > 0}
-              >
-                {isLoading ? (
-                  <span className="button-loading">
-                    <span className="spinner-small" /> Creating Account...
-                  </span>
-                ) : (
-                  'Register'
-                )}
-              </button>
-            </form>
-            <div className="auth-divider">
-              <span>Already have an account?</span>
-            </div>
-            <Link to="/login" className="auth-button secondary">
-              Sign In Instead
-            </Link>
-          </>
         )}
+
+        <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
+          <div className="form-group">
+            <label htmlFor="username" className="form-label">Username</label>
+            <div className="input-wrapper">
+              <FiUser className="input-icon" />
+              <input
+                type="text"
+                name="username"
+                id="username"
+                className={`form-input${validationErrors.username ? ' error' : ''}`}
+                placeholder="energy_trader_01"
+                value={formData.username}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            {validationErrors.username && (
+              <div className="field-error">{validationErrors.username}</div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">Email</label>
+            <div className="input-wrapper">
+              <FiMail className="input-icon" />
+              <input
+                type="email"
+                name="email"
+                id="email"
+                className={`form-input${validationErrors.email ? ' error' : ''}`}
+                placeholder="user@energy.io"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            {validationErrors.email && (
+              <div className="field-error">{validationErrors.email}</div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">Password</label>
+            <div className="input-wrapper">
+              <FiLock className="input-icon" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                id="password"
+                className={`form-input${validationErrors.password ? ' error' : ''}`}
+                placeholder="Create a strong password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                tabIndex={-1}
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {showPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
+            <PasswordStrength password={formData.password} />
+            {validationErrors.password && (
+              <div className="field-error">{validationErrors.password}</div>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+            <div className="input-wrapper">
+              <FiLock className="input-icon" />
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                name="confirmPassword"
+                id="confirmPassword"
+                className={`form-input${validationErrors.confirmPassword ? ' error' : ''}`}
+                placeholder="Re-enter your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                tabIndex={-1}
+                onClick={() => setShowConfirm((v) => !v)}
+              >
+                {showConfirm ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
+            {validationErrors.confirmPassword && (
+              <div className="field-error">{validationErrors.confirmPassword}</div>
+            )}
+          </div>
+
+          <div className="form-group form-options">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                name="acceptTerms"
+                className="checkbox-input"
+                checked={formData.acceptTerms}
+                onChange={handleChange}
+                required
+              />
+              <span className="checkbox-text">
+                I agree to the <Link to="/terms" className="link-text">Terms of Service</Link>
+              </span>
+            </label>
+            {validationErrors.acceptTerms && (
+              <div className="field-error">{validationErrors.acceptTerms}</div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="auth-button primary"
+            disabled={isLoading || Object.keys(validationErrors).length > 0}
+          >
+            {isLoading ? (
+              <span className="button-loading">
+                <span className="spinner-small" /> Creating Account...
+              </span>
+            ) : (
+              'Register'
+            )}
+          </button>
+        </form>
+
+        <div className="auth-divider">
+          <span>Already have an account?</span>
+        </div>
+        <Link to="/login" className="auth-button secondary">
+          Sign In Instead
+        </Link>
       </div>
     </div>
   );

@@ -1,154 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  FiLock, 
-  FiEye, 
-  FiEyeOff,
-  FiZap,
-  FiAlertTriangle,
-  FiCheck
-} from 'react-icons/fi';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { FiLock, FiEye, FiEyeOff, FiZap, FiAlertTriangle, FiCheck, FiClock } from 'react-icons/fi';
+import { useAuth } from '../../../context/AuthContext';
+import PasswordStrength from './PasswordStrength';
 
 export default function ResetPassword() {
-  const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: ''
-  });
+  const [step, setStep] = useState('otp');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isTokenValid, setIsTokenValid] = useState(true);
-  const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] });
+  const [countdown, setCountdown] = useState(0);
+  const [resetToken, setResetToken] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-
-  const { token } = useParams();
+  
+  const { verifyPasswordResetOTP, resetPassword, resendPasswordResetOTP } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+  const { token } = useParams();
+  
+  const email = location.state?.email || new URLSearchParams(location.search).get('email');
 
   useEffect(() => {
-    // Verify token validity
-    verifyToken();
+    if (token) {
+      console.log('🔑 Using token from URL params:', token.substring(0, 10) + '...');
+      setResetToken(token);
+      setStep('password');
+    }
   }, [token]);
 
-  const verifyToken = async () => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/auth/verify-reset-token/${token}`);
-      const data = await response.json();
-      
-      if (!data.success) {
-        setIsTokenValid(false);
-        setError('Invalid or expired reset token');
-      }
-    } catch (error) {
-      setIsTokenValid(false);
-      setError('Failed to verify reset token');
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
-  };
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
-  const checkPasswordStrength = (password) => {
-    const feedback = [];
-    let score = 0;
-
-    if (password.length >= 8) score += 1;
-    else feedback.push('At least 8 characters');
-
-    if (/[a-z]/.test(password)) score += 1;
-    else feedback.push('One lowercase letter');
-
-    if (/[A-Z]/.test(password)) score += 1;
-    else feedback.push('One uppercase letter');
-
-    if (/\d/.test(password)) score += 1;
-    else feedback.push('One number');
-
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 1;
-    else feedback.push('One special character');
-
-    return { score, feedback };
-  };
-
-  const validateField = (name, value) => {
-    const errors = { ...validationErrors };
-
-    switch (name) {
-      case 'password':
-        if (!value) {
-          errors.password = 'Password is required';
-        } else {
-          const strength = checkPasswordStrength(value);
-          setPasswordStrength(strength);
-          if (strength.score < 3) {
-            errors.password = 'Password is too weak';
-          } else {
-            delete errors.password;
-          }
-        }
-        break;
-
-      case 'confirmPassword':
-        if (!value) {
-          errors.confirmPassword = 'Please confirm your password';
-        } else if (value !== formData.password) {
-          errors.confirmPassword = 'Passwords do not match';
-        } else {
-          delete errors.confirmPassword;
-        }
-        break;
-
-      default:
-        break;
-    }
-
-    setValidationErrors(errors);
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  // Password validation
+  const validatePassword = (password) => {
+    let errors = {};
     
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    validateField(name, value);
-
-    if (name === 'password' && formData.confirmPassword) {
-      validateField('confirmPassword', formData.confirmPassword);
+    if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      errors.password = 'Password must contain uppercase, lowercase, and number';
     }
+    
+    return errors;
   };
 
-  const getPasswordStrengthColor = () => {
-    switch (passwordStrength.score) {
-      case 0:
-      case 1: return '#ef4444';
-      case 2: return '#f59e0b';
-      case 3: return '#3b82f6';
-      case 4:
-      case 5: return '#10b981';
-      default: return '#6b7280';
+  const validateConfirmPassword = (confirm, original) => {
+    if (confirm !== original) {
+      return { confirmPassword: 'Passwords do not match' };
     }
+    return {};
   };
 
-  const getPasswordStrengthText = () => {
-    switch (passwordStrength.score) {
-      case 0:
-      case 1: return 'Very Weak';
-      case 2: return 'Weak';
-      case 3: return 'Fair';
-      case 4: return 'Good';
-      case 5: return 'Strong';
-      default: return '';
+  // Update validation on password change
+  useEffect(() => {
+    if (newPassword) {
+      const passwordErrors = validatePassword(newPassword);
+      const confirmErrors = confirmPassword ? validateConfirmPassword(confirmPassword, newPassword) : {};
+      setValidationErrors({ ...passwordErrors, ...confirmErrors });
+    } else {
+      setValidationErrors({});
     }
-  };
+  }, [newPassword, confirmPassword]);
 
-  const handleSubmit = async (e) => {
+  // ✅ FIXED: Handle OTP submission with proper token capture
+  const handleOTPSubmit = async (e) => {
     e.preventDefault();
-
-    Object.keys(formData).forEach(key => {
-      validateField(key, formData[key]);
-    });
-
-    if (Object.keys(validationErrors).length > 0) {
+    if (!otp || otp.length !== 6) {
+      setError('Please enter a valid 6-digit code');
       return;
     }
 
@@ -156,99 +83,240 @@ export default function ResetPassword() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          newPassword: formData.password
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        navigate('/login', { 
-          state: { 
-            message: 'Password reset successful! Please sign in with your new password.' 
-          }
-        });
+      console.log('🔍 Submitting OTP verification:', { email, otp });
+      const result = await verifyPasswordResetOTP({ email, otp });
+      console.log('✅ OTP verification result:', result);
+      
+      if (result.success) {
+        console.log('🔑 Received reset token:', result.resetToken?.substring(0, 10) + '...');
+        setResetToken(result.resetToken);
+        setStep('password');
+        setError(''); // Clear any previous errors
       } else {
-        setError(data.message || 'Failed to reset password');
+        setError(result.message || 'Invalid or expired reset code');
       }
-    } catch (error) {
-      setError('Network error. Please try again.');
+    } catch (err) {
+      console.error('❌ OTP verification error:', err);
+      setError(err.message || 'Invalid or expired reset code');
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!isTokenValid) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="auth-container">
-          <div className="auth-card">
-            <div className="auth-header">
-              <div className="error-icon">
-                <FiAlertTriangle />
-              </div>
-              <h2 className="auth-title">Invalid Reset Link</h2>
-              <p className="auth-subtitle">
-                This password reset link is invalid or has expired.
-              </p>
-            </div>
+  // ✅ FIXED: Handle password submission with validation
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate before submitting
+    const passwordErrors = validatePassword(newPassword);
+    const confirmErrors = validateConfirmPassword(confirmPassword, newPassword);
+    const allErrors = { ...passwordErrors, ...confirmErrors };
+    
+    if (Object.keys(allErrors).length > 0) {
+      setValidationErrors(allErrors);
+      return;
+    }
 
-            <div className="auth-form">
-              <Link to="/forgot-password" className="auth-button primary">
-                Request New Reset Link
-              </Link>
-              
-              <Link to="/login" className="auth-button secondary">
-                Back to Sign In
-              </Link>
-            </div>
+    if (!resetToken) {
+      setError('Reset token is missing. Please start the password reset process again.');
+      return;
+    }
+    
+    const requestData = { 
+      token: resetToken, 
+      newPassword 
+    };
+    
+    console.log('🔍 Frontend: Submitting password reset with data:', {
+      token: resetToken ? 'Present' : 'Missing',
+      newPassword: newPassword ? 'Present' : 'Missing',
+      tokenLength: resetToken?.length,
+      passwordLength: newPassword?.length
+    });
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const result = await resetPassword(requestData);
+      console.log('✅ Frontend: Password reset successful:', result);
+      
+      if (result.success) {
+        setStep('success');
+        setTimeout(() => navigate('/login'), 3000);
+      } else {
+        setError(result.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      console.error('❌ Frontend: Password reset error:', err);
+      setError(err.message || 'Failed to reset password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      setError('');
+      console.log('📧 Resending password reset OTP to:', email);
+      await resendPasswordResetOTP({ email });
+      setCountdown(60);
+      // Show success message briefly
+      const originalError = error;
+      setError('');
+      setTimeout(() => {
+        if (!error) { // Only show if no other error occurred
+          console.log('✅ Password reset OTP resent successfully');
+        }
+      }, 100);
+    } catch (err) {
+      console.error('❌ Failed to resend password reset OTP:', err);
+      setError('Failed to resend code');
+    }
+  };
+
+  // Success state
+  if (step === 'success') {
+    return (
+      <div className="reset-password-scroll-center-root">
+        <div className="reset-password-scroll-center-card">
+          <div className="success-message">
+            <FiCheck className="success-icon" />
+            <div>Password reset successfully! Redirecting to login...</div>
           </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="auth-container">
-        <div className="auth-card">
+  // No email provided
+  if (!email && !token) {
+    return (
+      <div className="reset-password-scroll-center-root">
+        <div className="reset-password-scroll-center-card">
           <div className="auth-header">
             <div className="auth-logo">
-              <span className="auth-logo-icon"><FiZap /></span>
-              <h1 className="auth-logo-text">Energy Trading</h1>
+              <FiZap className="auth-logo-icon" />
+              <span className="auth-logo-text">Energy Exchange</span>
             </div>
-            <h2 className="auth-title">Reset Password</h2>
-            <p className="auth-subtitle">Enter your new password</p>
+            <div className="auth-title">Invalid Reset Link</div>
+            <div className="auth-subtitle">This password reset link is invalid or expired</div>
           </div>
+          
+          <div className="error-message">
+            <FiAlertTriangle className="error-icon" />
+            No email provided. Please start the password reset process again.
+          </div>
+          
+          <Link to="/forgot-password" className="auth-button primary">
+            Start Password Reset
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            {error && (
-              <div className="error-message">
-                <span className="error-icon"><FiAlertTriangle /></span>
-                <span>{error}</span>
-              </div>
-            )}
+  return (
+    <div className="reset-password-scroll-center-root">
+      <div className="reset-password-scroll-center-card">
+        <div className="auth-header">
+          <div className="auth-logo">
+            <FiZap className="auth-logo-icon" />
+            <span className="auth-logo-text">Energy Exchange</span>
+          </div>
+          <div className="auth-title">
+            {step === 'otp' ? 'Enter Reset Code' : 'Set New Password'}
+          </div>
+          <div className="auth-subtitle">
+            {step === 'otp' 
+              ? 'Enter the 6-digit code sent to your email' 
+              : 'Choose a strong new password'
+            }
+          </div>
+        </div>
+
+        {error && (
+          <div className="error-message">
+            <FiAlertTriangle className="error-icon" /> {error}
+          </div>
+        )}
+
+        {step === 'otp' ? (
+          <form onSubmit={handleOTPSubmit} className="auth-form">
+            <div className="email-display-label">
+              Reset code sent to: {email}
+            </div>
 
             <div className="form-group">
-              <label htmlFor="password" className="form-label">New Password</label>
+              <label htmlFor="otp" className="form-label">Reset Code</label>
               <div className="input-wrapper">
-                <span className="input-icon"><FiLock /></span>
                 <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type="text"
+                  name="otp"
+                  id="otp"
+                  className="form-input otp-input"
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength="6"
                   required
-                  value={formData.password}
-                  onChange={handleChange}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="auth-button primary"
+              disabled={!otp || otp.length !== 6 || isLoading}
+            >
+              {isLoading ? (
+                <span className="button-loading">
+                  <span className="spinner-small" /> Verifying...
+                </span>
+              ) : (
+                'Verify Code'
+              )}
+            </button>
+
+            <div className="auth-divider">
+              <span>Didn't receive the code?</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={countdown > 0}
+              className="auth-button secondary"
+            >
+              {countdown > 0 ? (
+                <span className="button-loading">
+                  <FiClock style={{ marginRight: '8px' }} />
+                  Resend in {countdown}s
+                </span>
+              ) : (
+                'Resend Code'
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handlePasswordSubmit} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="newPassword" className="form-label">New Password</label>
+              <div className="input-wrapper">
+                <FiLock className="input-icon" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="newPassword"
+                  id="newPassword"
                   className={`form-input ${validationErrors.password ? 'error' : ''}`}
-                  placeholder="Enter your new password"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  autoFocus
                 />
                 <button
                   type="button"
@@ -258,91 +326,62 @@ export default function ResetPassword() {
                   {showPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
-              
-              {formData.password && (
-                <div className="password-strength">
-                  <div className="strength-bar">
-                    <div 
-                      className="strength-fill"
-                      style={{ 
-                        width: `${(passwordStrength.score / 5) * 100}%`,
-                        backgroundColor: getPasswordStrengthColor()
-                      }}
-                    />
-                  </div>
-                  <div className="strength-text">
-                    <span style={{ color: getPasswordStrengthColor() }}>
-                      {getPasswordStrengthText()}
-                    </span>
-                  </div>
-                  {passwordStrength.feedback.length > 0 && (
-                    <div className="strength-feedback">
-                      <span>Missing:</span>
-                      <ul>
-                        {passwordStrength.feedback.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-              
+              <PasswordStrength password={newPassword} />
               {validationErrors.password && (
-                <span className="error-text">{validationErrors.password}</span>
+                <div className="field-error">{validationErrors.password}</div>
               )}
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword" className="form-label">Confirm New Password</label>
+              <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
               <div className="input-wrapper">
-                <span className="input-icon"><FiLock /></span>
+                <FiLock className="input-icon" />
                 <input
-                  id="confirmPassword"
+                  type={showConfirm ? 'text' : 'password'}
                   name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
+                  id="confirmPassword"
                   className={`form-input ${validationErrors.confirmPassword ? 'error' : ''}`}
-                  placeholder="Confirm your new password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
                 />
                 <button
                   type="button"
                   className="password-toggle"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() => setShowConfirm(!showConfirm)}
                 >
-                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                  {showConfirm ? <FiEyeOff /> : <FiEye />}
                 </button>
-                {!validationErrors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword && (
-                  <span className="input-success"><FiCheck /></span>
-                )}
               </div>
               {validationErrors.confirmPassword && (
-                <span className="error-text">{validationErrors.confirmPassword}</span>
+                <div className="field-error">{validationErrors.confirmPassword}</div>
               )}
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || Object.keys(validationErrors).length > 0}
               className="auth-button primary"
+              disabled={isLoading || !newPassword || !confirmPassword || Object.keys(validationErrors).length > 0}
             >
               {isLoading ? (
-                <div className="button-loading">
-                  <div className="spinner-small"></div>
-                  <span>Resetting...</span>
-                </div>
+                <span className="button-loading">
+                  <span className="spinner-small" /> Resetting...
+                </span>
               ) : (
-                <span>Reset Password</span>
+                'Reset Password'
               )}
             </button>
-
-            <Link to="/login" className="auth-button secondary">
-              Back to Sign In
-            </Link>
           </form>
+        )}
+
+        <div className="auth-divider">
+          <span>Remember your password?</span>
         </div>
+
+        <Link to="/login" className="auth-button secondary">
+          Back to Login
+        </Link>
       </div>
     </div>
   );

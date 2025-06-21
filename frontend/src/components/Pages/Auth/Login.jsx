@@ -21,7 +21,6 @@ export default function Login() {
   const from = location.state?.from?.pathname || '/dashboard';
   const { setUser, setIsAuthenticated } = useAuth();
 
-
   useEffect(() => {
     if (isAuthenticated) navigate(from, { replace: true });
     document.body.classList.add('auth-noscroll');
@@ -49,57 +48,48 @@ export default function Login() {
     }
   };
 
-   const handleGoogleSuccess = async (response) => {
-  console.log('🟢 [GoogleLogin] Google response:', response);
-  try {
-    const result = await authService.googleAuth(response.credential);
-    console.log('🟢 [GoogleLogin] Backend response:', result);
-    if (result.success) {
-      // Store token
-      localStorage.setItem('token', result.tokens.accessToken);
-      // Update auth state if you use context
-      setUser(result.user);
-      setIsAuthenticated(true);
-      // Now navigate
-      navigate('/dashboard');
-    } else {
-      setGoogleError(result.message || "Google authentication failed");
-      console.error('🔴 [GoogleLogin] Backend error:', result.message);
+  const handleGoogleSuccess = async (response) => {
+    console.log('🟢 [GoogleLogin] Google response:', response);
+    try {
+      const result = await authService.googleAuth(response.credential);
+      console.log('🟢 [GoogleLogin] Backend response:', result);
+      if (result.success) {
+        // Store token
+        localStorage.setItem('token', result.tokens.accessToken);
+        // Update auth state if you use context
+        setUser(result.user);
+        setIsAuthenticated(true);
+        // Now navigate
+        navigate('/dashboard');
+      } else {
+        setGoogleError(result.message || "Google authentication failed");
+        console.error('🔴 [GoogleLogin] Backend error:', result.message);
+      }
+    } catch (err) {
+      setGoogleError('Google authentication failed');
+      console.error('🔴 [GoogleLogin] Exception:', err);
     }
-  } catch (err) {
-    setGoogleError('Google authentication failed');
-    console.error('🔴 [GoogleLogin] Exception:', err);
-  }
-};
-
-
+  };
 
   return (
-    <div className="auth-fixed-root">
-      {/* Left: Fixed glassmorphic login box */}
-      <div className="auth-fixed-left">
-        <div
-          className="auth-card"
-          style={{
-            maxWidth: 480,
-            minWidth: 320,
-            width: 380,
-            margin: 0
-          }}
-        >
-          <div className="auth-header" style={{ marginBottom: '1.2rem' }}>
-            {/* No logo, no title, no "Welcome" */}
+    <div className="login-scroll-center-root">
+      {/* Left: Scrollable login form */}
+      <div className="login-scroll-center-left">
+        <div className="login-scroll-center-card">
+          <div className="auth-header" style={{ marginBottom: '1rem' }}>
             <p className="auth-subtitle" style={{ marginBottom: 0, textAlign: 'left' }}>
               Sign in to your energy trading account
             </p>
           </div>
+          
           {(error || googleError) && (
             <div className="error-message">
               <FiAlertTriangle className="error-icon" />
               <span>{error || googleError}</span>
             </div>
           )}
-          <form className="auth-form" onSubmit={handleSubmit} style={{ gap: '1rem' }}>
+          
+          <form className="auth-form" onSubmit={handleSubmit} style={{ gap: '0.9rem' }}>
             <div className="form-group" style={{ gap: '0.25rem' }}>
               <label htmlFor="email" className="form-label">
                 Email Address
@@ -120,6 +110,7 @@ export default function Login() {
                 />
               </div>
             </div>
+            
             <div className="form-group" style={{ gap: '0.25rem' }}>
               <label htmlFor="password" className="form-label">
                 Password
@@ -158,6 +149,7 @@ export default function Login() {
                 </button>
               </div>
             </div>
+            
             <div className="form-options" style={{ marginTop: '0.2rem', marginBottom: '0.2rem' }}>
               <label className="checkbox-label">
                 <input
@@ -173,6 +165,7 @@ export default function Login() {
                 Forgot Password?
               </Link>
             </div>
+            
             <button
               type="submit"
               disabled={isLoading}
@@ -187,9 +180,11 @@ export default function Login() {
                 'Sign In'
               )}
             </button>
+            
             <div className="auth-divider">
               <span>Or continue with</span>
             </div>
+            
             <div style={{ display: "flex", justifyContent: "center" }}>
               <GoogleLogin
                 theme="filled_black"
@@ -203,7 +198,8 @@ export default function Login() {
                 text="signin_with"
               />
             </div>
-            <div className="auth-footer" style={{ marginTop: '1rem' }}>
+            
+            <div className="auth-footer" style={{ marginTop: '0.8rem' }}>
               <p>
                 New to Energy Exchange?{' '}
                 <Link to="/register" className="auth-link">
@@ -214,11 +210,11 @@ export default function Login() {
           </form>
         </div>
       </div>
+      
       {/* Right: App info & animated circuit design */}
-      <div className="auth-fixed-right">
+      <div className="login-scroll-center-right">
         <div className="auth-circuit-bg" />
         <div className="auth-app-info">
-          {/* You can keep or further customize this panel */}
           <h2 style={{ color: '#00ffff', marginBottom: '0.7rem', fontWeight: 700, fontSize: '1.6rem' }}>
             Energy Exchange
           </h2>

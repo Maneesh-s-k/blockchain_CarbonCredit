@@ -28,8 +28,14 @@ class ApiService {
       if (response.status === 401) {
         console.warn('🚫 Authentication failed - clearing token');
         this.clearAuthToken();
-        throw new Error('Authentication required. Please log in.');
+        throw new Error('Username And Password Do NotMatch');
       }
+
+      if (response.status === 401 && response.data.message === 'User account not found') {
+      localStorage.removeItem('token');
+  
+           window.location.href = '/login'; 
+       }
       
       if (response.status === 403) {
         throw new Error('Access forbidden. You don\'t have permission.');
@@ -69,6 +75,48 @@ class ApiService {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(userData)
+    });
+    return this.handleResponse(response);
+  }
+
+   async verifyOTP(data) {
+    console.log('🔍 ApiService: Verifying OTP with data:', data);
+    const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    const result = await this.handleResponse(response);
+    
+    // Store token after successful OTP verification
+    if (result.success && (result.token || result.tokens?.accessToken)) {
+      this.setAuthToken(result.token || result.tokens.accessToken);
+      console.log('✅ ApiService: Token stored after OTP verification');
+    }
+    
+    return result;
+  }
+
+   async sendOTP(data) {
+    console.log('📧 ApiService: Sending OTP to:', data.email);
+    const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    const result = await this.handleResponse(response);
+    console.log('✅ ApiService: OTP sent successfully');
+    return result;
+  }
+
+  async getProfile() {
+    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'GET',
+      headers: this.getHeaders()
     });
     return this.handleResponse(response);
   }
@@ -181,16 +229,51 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async resetPassword(token, newPassword) {
-    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ token, newPassword })
-    });
-    return this.handleResponse(response);
+  async verifyPasswordResetOTP(data) {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-password-reset-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  return this.handleResponse(response);
+ }
+
+
+  async resetPassword(data) {
+  console.log('🔍 ApiService: Sending reset password request:', data);
+  
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  
+  console.log('🔍 ApiService: Response status:', response.status);
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('❌ ApiService: Error response:', errorData);
+    throw new Error(errorData.message || 'Failed to reset password');
   }
+  
+  return this.handleResponse(response);
+}
+
+
+  async resendPasswordResetOTP(data) {
+  const response = await fetch(`${API_BASE_URL}/auth/resend-password-reset-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  return this.handleResponse(response);
+}
 
  async verifyEmail(token) {
   const response = await fetch(

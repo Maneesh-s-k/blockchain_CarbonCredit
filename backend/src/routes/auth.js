@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
+const User = require('../models/User');
 const authController = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const { OAuth2Client } = require('google-auth-library');
@@ -77,6 +78,42 @@ const validateChangePassword = [
     .withMessage('New password must contain at least one uppercase letter, one lowercase letter, and one number')
 ];
 
+
+router.get('/debug/check-user/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const user = await User.findOne({ email });
+    res.json({ 
+      exists: !!user,
+      user: user ? { 
+        email: user.email, 
+        username: user.username, 
+        id: user._id,
+        isEmailVerified: user.isEmailVerified 
+      } : null
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+router.delete('/debug/force-delete/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const result = await User.deleteMany({ email: email });
+    res.json({ 
+      success: true, 
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} users with email ${email}`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
 // Auth routes
 router.post('/register', validateRegister, authController.register);
 router.post('/login', validateLogin, authController.login);
@@ -85,8 +122,15 @@ router.post('/logout', authController.logout);
 
 // Password management
 router.post('/forgot-password', validateForgotPassword, authController.forgotPassword);
+router.post('/verify-password-reset-otp', authController.verifyPasswordResetOTP);
+router.post('/resend-password-reset-otp', authController.resendPasswordResetOTP);
 router.post('/reset-password', validateResetPassword, authController.resetPassword);
 router.post('/change-password', authenticate, validateChangePassword, authController.changePassword);
+
+// otp related routes
+router.post('/verify-otp', authController.verifyOTP);
+router.post('/resend-otp', authController.sendOTP);
+
 
 // Profile
 router.get('/profile', authenticate, authController.getProfile);
