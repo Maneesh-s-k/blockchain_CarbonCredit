@@ -1,10 +1,20 @@
+const path = require('path');
+require('dotenv').config({ 
+  path: path.join(__dirname, '../.env') 
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
 const express = require('express');
 const cors = require('cors');
+
 const mongoose = require('mongoose');
-const path = require('path');
+
 const http = require('http');
 const WebSocket = require('ws');
-require('dotenv').config();
+
 
 // Import all models to ensure they're registered
 require('./models/User');
@@ -398,8 +408,21 @@ const connectDB = async (retries = 5) => {
       w: 'majority'
     };
 
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/energy-trading';
+    // ✅ FIXED: Proper environment variable handling with debugging
+    const mongoUri = process.env.MONGODB_URI;
     
+    console.log('🔍 Environment Debug:', {
+      NODE_ENV: process.env.NODE_ENV,
+      MONGODB_URI: mongoUri ? 'SET' : 'UNDEFINED',
+      mongoUriLength: mongoUri ? mongoUri.length : 0,
+      mongoUriPreview: mongoUri ? mongoUri.substring(0, 50) + '...' : 'N/A'
+    });
+    
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI environment variable is not defined. Please check your environment configuration.');
+    }
+    
+    console.log('🔄 Attempting MongoDB connection...');
     await mongoose.connect(mongoUri, mongoOptions);
     
     console.log('✅ MongoDB connected successfully');
@@ -423,6 +446,11 @@ const connectDB = async (retries = 5) => {
     
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
+    console.error('📋 Connection details:', {
+      errorName: error.name,
+      errorCode: error.code,
+      mongoUri: process.env.MONGODB_URI ? 'SET' : 'UNDEFINED'
+    });
     
     if (retries > 0) {
       console.log(`🔄 Retrying connection... (${retries} attempts left)`);
@@ -433,6 +461,7 @@ const connectDB = async (retries = 5) => {
     }
   }
 };
+
 
 // Enhanced MongoDB connection event handlers
 mongoose.connection.on('connected', () => {
