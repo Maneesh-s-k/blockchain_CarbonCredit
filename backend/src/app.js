@@ -491,7 +491,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 // Start server with enhanced initialization
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || 'localhost';
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'; 
 
 const startServer = async () => {
   try {
