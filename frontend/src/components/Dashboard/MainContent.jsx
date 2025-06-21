@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import SideNavBar from './SideNavBar';
 import TopOptionsBar from './TopOptionsBar';
 import DashboardPage from './DashboardPage';
@@ -10,6 +10,7 @@ import History from '../Pages/History';
 import Payments from '../Pages/Payments';
 import Settings from '../Pages/Settings';
 import Profile from '../Pages/Auth/Profile';
+import AnalyticsDashboard from '../Analytics/AnalyticsDashboard';
 
 export default function MainContent() {
   const [isLoading, setIsLoading] = useState(false);
@@ -76,11 +77,14 @@ export default function MainContent() {
 
   return (
     <div className="dashboard-container">
+      {/* ✅ Sidebar is always present */}
       <SideNavBar />
       
       <div className="main-content-wrapper">
+        {/* ✅ TopBar is always present */}
         <TopOptionsBar setIsLoading={setIsLoading} />
         
+        {/* ✅ Loading overlay */}
         {isLoading && (
           <div className="loading-overlay">
             <div className="loading-content">
@@ -90,6 +94,7 @@ export default function MainContent() {
           </div>
         )}
         
+        {/* ✅ Page content with all routes */}
         <div className="page-content">
           <Routes>
             <Route path="/" element={<DashboardPage setIsLoading={setIsLoading} />} />
@@ -101,6 +106,10 @@ export default function MainContent() {
             <Route path="/payments" element={<Payments />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+          
+            <Route path="/analytics" element={<AnalyticsDashboard setIsLoading={setIsLoading} />} />
+       
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>

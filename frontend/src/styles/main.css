@@ -440,6 +440,14 @@ img, video, iframe, canvas, svg {
   }
 }
 
+/* ✅ CRITICAL: Secondary Column with slight right gap */
+.dashboard-secondary-column {
+  position: sticky;
+  top: 80px;
+  height: fit-content;
+  margin-right: 8px; /* ✅ NEW: Slight gap from screen edge */
+}
+
 /* Professional Icon Styling - UNCHANGED */
 .nav-icon,
 .btn-icon,

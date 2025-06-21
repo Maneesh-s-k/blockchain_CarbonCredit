@@ -16,6 +16,7 @@
   z-index: 1000;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .floating-wallet-icon:active {
@@ -35,6 +36,28 @@
 .floating-wallet-icon.disconnected {
   border-color: rgba(239, 68, 68, 0.5);
   box-shadow: 0 8px 32px rgba(239, 68, 68, 0.2);
+}
+
+/* ✅ FIXED: Wallet Label Container */
+.floating-wallet-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ✅ FIXED: Wallet Label Styles */
+.wallet-label {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .metamask-icon svg {
@@ -82,8 +105,6 @@
 .floating-wallet-header:active {
   cursor: grabbing;
 }
-
-
 
 .window-title {
   display: flex;
@@ -478,22 +499,62 @@
     left: 5% !important;
     right: 5% !important;
   }
-  
+
   .balance-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .wallet-quick-actions {
     flex-direction: column;
   }
-  
+
   .floating-wallet-icon {
     width: 50px;
     height: 50px;
   }
-  
+
   .metamask-icon svg {
     width: 24px;
     height: 24px;
   }
+
+  /* Responsive label */
+  .wallet-label {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+}
+
+/* ✅ SIMPLE: Wallet tooltip that appears above icon */
+.wallet-tooltip {
+  position: absolute;
+  bottom: 70px; /* Position above the icon */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ✅ Add small arrow pointing down */
+.wallet-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+/* ✅ Container for icon + tooltip */
+.floating-wallet-icon-container {
+  position: relative;
 }

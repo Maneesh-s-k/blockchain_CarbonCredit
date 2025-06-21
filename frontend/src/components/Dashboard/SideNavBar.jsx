@@ -21,7 +21,7 @@ export default function SideNavBar() {
 
   const navItems = [
     { icon: <FiHome />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <FiZap />, label: 'Energy Exchange', path: '/energy-exchange' },
+    { icon: <FiZap />, label: 'Energy Trading', path: '/energy-exchange' },
     { icon: <FiGrid />, label: 'My Devices', path: '/devices' },
     { icon: <FiTool />, label: 'Register Device', path: '/register-device' },
     { icon: <FiBarChart2 />, label: 'History', path: '/history' },
@@ -56,7 +56,7 @@ export default function SideNavBar() {
       <div className="nav-logo" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
         <div className="logo-icon"><FiZap /></div>
         <h1 className={`logo-text ${isHovered ? 'visible' : 'hidden'}`}>
-          Energy Trading
+          Energy Exchange
         </h1>
       </div>
 

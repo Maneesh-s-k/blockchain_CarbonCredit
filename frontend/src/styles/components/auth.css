@@ -777,3 +777,128 @@
     display: none;
   }
 }
+
+
+
+/* ✅ FIXED: Google Sign-In button container */
+.google-login-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* ✅ FIXED: Google button iframe styling */
+.google-login-container iframe {
+  width: 100% !important;
+  max-width: 300px !important;
+  min-width: 200px !important;
+  overflow: visible !important;
+  border: none !important;
+  border-radius: 24px !important;
+}
+
+/* ✅ FIXED: Google button div styling */
+.google-login-container > div {
+  width: 100% !important;
+  max-width: 300px !important;
+  overflow: visible !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* ✅ FIXED: Ensure auth card has enough width */
+.login-scroll-center-card {
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1.8rem 2.2rem;
+  width: 100%;
+  max-width: 400px !important; /* ✅ INCREASED: From 380px to 400px */
+  min-width: 320px !important; /* ✅ INCREASED: From 280px to 320px */
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  overflow: visible !important; /* ✅ NEW: Prevent clipping */
+}
+
+/* ✅ FIXED: Auth form overflow */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: visible !important; /* ✅ NEW: Prevent clipping */
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ✅ FIXED: Left container width */
+.login-scroll-center-left {
+  flex: 0 0 450px !important; /* ✅ INCREASED: From 420px to 450px */
+  max-width: 500px !important; /* ✅ INCREASED: From 480px to 500px */
+  min-width: 350px !important; /* ✅ INCREASED: From 320px to 350px */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 5vw;
+  background: none;
+  z-index: 2;
+  overflow-y: auto;
+  overflow-x: visible !important; /* ✅ NEW: Allow horizontal overflow for button */
+}
+
+/* ✅ FIXED: Mobile responsiveness */
+@media (max-width: 900px) {
+  .login-scroll-center-card {
+    padding: 1.5rem 1.8rem;
+    min-width: 0;
+    width: calc(100vw - 32px) !important; /* ✅ FIXED: Proper mobile width */
+    max-width: calc(100vw - 32px) !important;
+    margin: 1.5rem 16px; /* ✅ FIXED: Add horizontal margin */
+  }
+  
+  .login-scroll-center-left {
+    width: 100vw;
+    min-width: 0;
+    max-width: 100vw;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0;
+    min-height: auto;
+  }
+  
+  .google-login-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 8px !important; /* ✅ NEW: Add padding on mobile */
+  }
+  
+  .google-login-container iframe {
+    max-width: calc(100% - 16px) !important; /* ✅ FIXED: Account for padding */
+  }
+}
+
+@media (max-width: 480px) {
+  .login-scroll-center-card {
+    padding: 1.2rem 1.4rem;
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin: 1rem 12px;
+  }
+  
+  .google-login-container iframe {
+    max-width: 280px !important; /* ✅ FIXED: Smaller max width for small screens */
+  }
+}

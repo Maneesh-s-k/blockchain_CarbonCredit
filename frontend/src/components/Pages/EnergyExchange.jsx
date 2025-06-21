@@ -749,7 +749,7 @@ useEffect(() => {
         <div className="exchange-container">
           <div className="exchange-header">
             <div className="header-content">
-              <h1>Energy Exchange</h1>
+              <h1>Energy Trading</h1>
               <p>Trade renewable energy credits with verified producers and consumers</p>
             </div>
             <div className="header-actions">

@@ -1,5 +1,33 @@
 /* Dashboard - Compact & Optimized Layout */
 
+/* Secondary Column Styles - FIXED RIGHT SPACING */
+.dashboard-secondary-column {
+  position: sticky;
+  top: 80px;
+  height: fit-content;
+  margin-right: 16px; /* ✅ INCREASED: More gap from screen edge */
+  padding-right: 8px; /* ✅ NEW: Additional padding */
+}
+
+/* ✅ FIXED: Main Dashboard Layout with proper spacing */
+.dashboard-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+  padding-right: 8px; /* ✅ NEW: Prevent content from touching edge */
+}
+
+/* ✅ FIXED: Ensure all containers have proper right spacing */
+.dashboard-content {
+  padding: 16px 24px 16px 24px; /* ✅ FIXED: Consistent padding */
+  max-width: calc(100vw - 16px); /* ✅ NEW: Prevent overflow */
+  margin: 0 auto;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Rest of your existing CSS remains the same... */
 
 
 /* Base Dashboard Styles */

@@ -10,6 +10,7 @@ import ForgotPassword from './components/Pages/Auth/ForgotPassword';
 import ResetPassword from './components/Pages/Auth/ResetPassword';
 import ApiTest from './components/Test/ApiTest';
 import VerifyEmail from './components/Pages/Auth/VerifyEmail';
+import AnalyticsDashboard from './components/Analytics/AnalyticsDashboard';
 import './styles/main.css';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
                <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
+             
               <Route 
                 path="/*" 
                 element={

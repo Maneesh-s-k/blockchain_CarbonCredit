@@ -185,15 +185,16 @@ export default function Login() {
               <span>Or continue with</span>
             </div>
             
-            <div style={{ display: "flex", justifyContent: "center" }}>
+            {/* ✅ FIXED: Google button container with proper overflow handling */}
+            <div className="google-login-container">
               <GoogleLogin
                 theme="filled_black"
                 size="large"
                 shape="pill"
-                width={300}
+                width="300"
                 onSuccess={handleGoogleSuccess}
                 onError={() => setGoogleError('Google authentication failed')}
-                useOneTap
+                useOneTap={false}
                 logo_alignment="center"
                 text="signin_with"
               />

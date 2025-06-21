@@ -1,4 +1,4 @@
-/* Profile Page - Complete CSS with Full Width Navigation */
+/* Profile Page - Complete CSS with Full Width Navigation - FIXED RIGHT SPACING */
 .profile-page {
   min-height: 100vh;
   background: var(--bg-gradient);
@@ -20,11 +20,14 @@
   pointer-events: none;
 }
 
+/* ✅ FIXED: Container with proper right spacing */
 .profile-container {
-  max-width: 1100px;
+  max-width: calc(100vw - 32px); /* ✅ NEW: Prevent touching screen edge */
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  padding-right: 16px; /* ✅ NEW: Additional right padding */
+  box-sizing: border-box;
 }
 
 /* Header */
@@ -34,6 +37,9 @@
   align-items: center;
   margin-bottom: 20px;
   padding: 20px;
+  /* ✅ FIXED: Ensure header doesn't overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .header-content h1.gradient-text {
@@ -58,6 +64,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0; /* ✅ NEW: Prevent shrinking */
 }
 
 .glass-button {
@@ -117,6 +124,9 @@
   padding: 12px 16px;
   border-radius: var(--radius-md);
   animation: slideInDown 0.3s ease-out;
+  /* ✅ FIXED: Ensure banner doesn't overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .message-banner button {
@@ -135,12 +145,15 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* FIXED NAVIGATION - FULL WIDTH */
+/* ✅ FIXED: NAVIGATION - FULL WIDTH with proper spacing */
 .profile-navigation-wrapper {
   width: 100%;
   margin-bottom: 20px;
   position: relative;
   z-index: 2;
+  /* ✅ NEW: Ensure wrapper doesn't overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-navigation {
@@ -155,6 +168,9 @@
   display: flex;
   gap: 3px;
   padding: 6px;
+  /* ✅ NEW: Prevent overflow */
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .nav-tab {
@@ -177,6 +193,8 @@
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
+  /* ✅ NEW: Prevent tab overflow */
+  min-width: 0;
 }
 
 .nav-tab::before {
@@ -214,17 +232,26 @@
 
 .tab-label {
   display: block;
+  /* ✅ NEW: Prevent text overflow */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Content */
+/* ✅ FIXED: Content with proper spacing */
 .profile-content {
   position: relative;
   z-index: 1;
   width: 100%;
+  /* ✅ NEW: Ensure content doesn't overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-tab-content {
   width: 100%;
+  /* ✅ NEW: Prevent overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Loading Content */
@@ -238,17 +265,24 @@
   padding: 40px;
 }
 
-/* Overview Layout */
+/* ✅ FIXED: Overview Layout with proper spacing */
 .profile-overview-layout {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
   align-items: start;
+  /* ✅ NEW: Ensure grid doesn't overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-main-card,
 .stats-sidebar {
   padding: 20px;
+  /* ✅ NEW: Prevent card overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .profile-header-section {
@@ -256,6 +290,9 @@
   align-items: center;
   gap: 16px;
   margin-bottom: 20px;
+  /* ✅ NEW: Prevent header overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-avatar {
@@ -265,6 +302,7 @@
   object-fit: cover;
   border: 2px solid rgba(0, 255, 255, 0.4);
   box-shadow: 0 3px 12px rgba(0, 255, 255, 0.2);
+  flex-shrink: 0; /* ✅ NEW: Prevent avatar shrinking */
 }
 
 .avatar-placeholder {
@@ -279,6 +317,13 @@
   color: var(--text-secondary);
   font-size: 28px;
   box-shadow: 0 3px 12px rgba(0, 255, 255, 0.1);
+  flex-shrink: 0; /* ✅ NEW: Prevent avatar shrinking */
+}
+
+.profile-info {
+  /* ✅ NEW: Allow info to shrink properly */
+  min-width: 0;
+  flex: 1;
 }
 
 .profile-info h2 {
@@ -287,6 +332,9 @@
   font-weight: 700;
   margin-bottom: 3px;
   line-height: 1.2;
+  /* ✅ NEW: Prevent text overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .profile-email {
@@ -294,6 +342,9 @@
   font-size: 13px;
   margin-bottom: 6px;
   opacity: 0.8;
+  /* ✅ NEW: Prevent email overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .verification-badge {
@@ -325,6 +376,9 @@
   background: rgba(255, 255, 255, 0.02);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-glass);
+  /* ✅ NEW: Prevent bio overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .bio-section h4 {
@@ -339,6 +393,9 @@
   line-height: 1.6;
   margin: 0;
   font-size: 13px;
+  /* ✅ NEW: Prevent text overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .contact-info {
@@ -358,6 +415,10 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-glass);
   transition: var(--transition);
+  /* ✅ NEW: Prevent info item overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .info-item:hover {
@@ -395,6 +456,9 @@
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   transition: all 0.3s ease;
+  /* ✅ NEW: Prevent stat overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .stat-item:hover {
@@ -420,7 +484,7 @@
 
 .stat-info {
   flex: 1;
-  min-width: 0;
+  min-width: 0; /* ✅ NEW: Allow proper shrinking */
 }
 
 .stat-value {
@@ -430,6 +494,9 @@
   display: block;
   margin-bottom: 2px;
   line-height: 1.2;
+  /* ✅ NEW: Prevent value overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .stat-label {
@@ -438,6 +505,9 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  /* ✅ NEW: Prevent label overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Edit Sections */
@@ -445,6 +515,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  /* ✅ NEW: Prevent sections overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-card {
@@ -457,6 +530,9 @@
   padding: 20px;
   position: relative;
   overflow: hidden;
+  /* ✅ NEW: Prevent card overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-card::before {
@@ -484,18 +560,25 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  /* ✅ NEW: Prevent upload section overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .current-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; /* ✅ NEW: Prevent avatar shrinking */
 }
 
 .upload-controls {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* ✅ NEW: Allow controls to shrink */
+  min-width: 0;
+  flex: 1;
 }
 
 .upload-btn {
@@ -512,6 +595,9 @@
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
+  /* ✅ NEW: Prevent button overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .upload-btn:hover {
@@ -525,18 +611,29 @@
   font-size: 11px;
   margin: 0;
   opacity: 0.7;
+  /* ✅ NEW: Prevent text overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
+/* ✅ FIXED: Form grid with proper spacing */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  /* ✅ NEW: Prevent grid overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* ✅ NEW: Prevent form group overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .full-width {
@@ -559,6 +656,10 @@
   font-size: 13px;
   transition: all 0.3s ease;
   font-family: inherit;
+  /* ✅ NEW: Prevent input overflow */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-input:focus,
@@ -580,6 +681,9 @@
   color: var(--text-secondary);
   font-size: 11px;
   opacity: 0.7;
+  /* ✅ NEW: Prevent small text overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .char-count {
@@ -595,11 +699,17 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  /* ✅ NEW: Prevent preferences overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .preference-item {
   display: flex;
   align-items: center;
+  /* ✅ NEW: Prevent preference overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .preference-label {
@@ -609,24 +719,36 @@
   color: var(--text-primary);
   font-size: 14px;
   cursor: pointer;
+  /* ✅ NEW: Prevent label overflow */
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .preference-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
   accent-color: var(--circuit-primary);
+  flex-shrink: 0; /* ✅ NEW: Prevent checkbox shrinking */
 }
 
-/* Statistics Grid */
+/* ✅ FIXED: Statistics Grid with proper spacing */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
   gap: 16px;
+  /* ✅ NEW: Prevent stats grid overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .stat-card {
   padding: 20px;
   transition: all 0.3s ease;
+  /* ✅ NEW: Prevent stat card overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .stat-card:hover {
@@ -640,11 +762,15 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
+  /* ✅ NEW: Prevent header overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .stat-header svg {
   color: var(--circuit-primary);
   font-size: 18px;
+  flex-shrink: 0; /* ✅ NEW: Prevent icon shrinking */
 }
 
 .stat-header h4 {
@@ -652,17 +778,26 @@
   font-size: 15px;
   font-weight: 600;
   margin: 0;
+  /* ✅ NEW: Prevent title overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .stat-metrics {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  /* ✅ NEW: Prevent metrics overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .metric {
   text-align: center;
   flex: 1;
+  /* ✅ NEW: Prevent metric overflow */
+  min-width: 0;
 }
 
 .metric-value {
@@ -672,6 +807,9 @@
   display: block;
   margin-bottom: 3px;
   line-height: 1.2;
+  /* ✅ NEW: Prevent value overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .metric-label {
@@ -680,11 +818,18 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  /* ✅ NEW: Prevent label overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Blockchain */
 .blockchain-card {
   padding: 20px;
+  /* ✅ NEW: Prevent blockchain card overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .blockchain-connected,
@@ -702,6 +847,9 @@
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-glass);
+  /* ✅ NEW: Prevent status overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-badge.success {
@@ -723,6 +871,10 @@
   padding: 16px;
   text-align: left;
   margin-bottom: 16px;
+  /* ✅ NEW: Prevent details overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .blockchain-item {
@@ -731,6 +883,10 @@
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid var(--border-glass);
+  /* ✅ NEW: Prevent item overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 10px;
 }
 
 .blockchain-item:last-child {
@@ -741,12 +897,18 @@
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 13px;
+  flex-shrink: 0; /* ✅ NEW: Prevent label shrinking */
 }
 
 .blockchain-item span {
   color: var(--text-primary);
   font-weight: 600;
   font-size: 13px;
+  /* ✅ NEW: Allow span to shrink */
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-align: right;
 }
 
 .address {
@@ -757,6 +919,9 @@
   border-radius: var(--radius-sm);
   border: 1px solid rgba(0, 255, 255, 0.3);
   word-break: break-all;
+  /* ✅ NEW: Prevent address overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .blockchain-actions {
@@ -779,6 +944,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* ✅ NEW: Prevent button overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .connect-wallet-btn:hover:not(:disabled) {
@@ -815,6 +983,8 @@
   max-height: 90vh;
   overflow-y: auto;
   animation: slideInUp 0.3s ease-out;
+  /* ✅ NEW: Prevent modal overflow */
+  box-sizing: border-box;
 }
 
 .modal-header {
@@ -823,6 +993,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* ✅ NEW: Prevent header overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-header h3 {
@@ -830,6 +1003,10 @@
   font-size: 18px;
   font-weight: 600;
   margin: 0;
+  /* ✅ NEW: Prevent title overflow */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .modal-header button {
@@ -841,6 +1018,7 @@
   padding: 4px;
   border-radius: 4px;
   transition: var(--transition);
+  flex-shrink: 0; /* ✅ NEW: Prevent button shrinking */
 }
 
 .modal-header button:hover {
@@ -850,6 +1028,9 @@
 
 .modal-body {
   padding: 24px;
+  /* ✅ NEW: Prevent body overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-footer {
@@ -858,14 +1039,23 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  /* ✅ NEW: Prevent footer overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .password-input {
   position: relative;
+  /* ✅ NEW: Prevent password input overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .password-input input {
   padding-right: 40px;
+  /* ✅ NEW: Ensure input fits */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .password-toggle {
@@ -925,10 +1115,17 @@
   }
 }
 
-/* Responsive Design */
+/* ✅ ENHANCED: Responsive Design with proper spacing */
 @media (max-width: 1024px) {
   .profile-overview-layout {
     grid-template-columns: 1.5fr 1fr;
+    gap: 16px; /* ✅ Reduced gap */
+  }
+  
+  /* ✅ NEW: Reduce container padding */
+  .profile-container {
+    padding-right: 12px;
+    max-width: calc(100vw - 24px);
   }
 }
 
@@ -937,6 +1134,7 @@
     flex-direction: column;
     gap: 16px;
     text-align: center;
+    padding: 16px; /* ✅ Reduced padding */
   }
 
   .header-actions {
@@ -951,6 +1149,7 @@
 
   .profile-overview-layout {
     grid-template-columns: 1fr;
+    gap: 16px; /* ✅ Reduced gap */
   }
 
   .profile-header-section {
@@ -983,6 +1182,12 @@
     padding: 10px 8px;
     min-height: 44px;
   }
+  
+  /* ✅ NEW: Mobile container adjustments */
+  .profile-container {
+    padding-right: 8px;
+    max-width: calc(100vw - 16px);
+  }
 }
 
 @media (max-width: 480px) {
@@ -1013,6 +1218,16 @@
   .profile-navigation {
     padding: 4px;
     gap: 2px;
+  }
+  
+  /* ✅ NEW: Small screen adjustments */
+  .profile-container {
+    padding-right: 4px;
+    max-width: calc(100vw - 8px);
+  }
+  
+  .profile-header {
+    padding: 12px;
   }
 }
 
@@ -1055,6 +1270,9 @@
   box-shadow: var(--shadow-glass);
   position: relative;
   overflow: hidden;
+  /* ✅ NEW: Prevent panel overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .glass-panel::before {
@@ -1076,6 +1294,9 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-glass);
   box-shadow: var(--shadow-glass);
+  /* ✅ NEW: Prevent nav overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Glass Overlay */
@@ -1093,6 +1314,9 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-glass);
   box-shadow: var(--shadow-glass);
+  /* ✅ NEW: Prevent modal overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Glass Badge */
@@ -1106,4 +1330,9 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 500;
+  /* ✅ NEW: Prevent badge overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
