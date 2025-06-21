@@ -28,14 +28,21 @@
 @import './components/marketplace.css';
 @import './components/profile.css';
 @import './components/analytics-dashboard.css';
+
 /* Responsive */
 @import './responsive/breakpoints.css';
 
-/* Global reset and body styles */
+/* ✅ CRITICAL: Global reset and overflow fixes */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -55,17 +62,385 @@ body {
   background-attachment: fixed;
   color: #ffffff;
   min-height: 100vh;
+  width: 100%;
   overflow-x: hidden;
   line-height: 1.6;
+  position: relative;
+}
+
+/* ✅ CRITICAL: App container fixes */
+.App {
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
 }
 
 .dashboard-container {
   display: flex;
   min-height: 100vh;
   background: transparent;
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
 }
 
-/* Professional Icon Styling */
+/* ✅ CRITICAL: Main content area fixes - SIMPLIFIED */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width-collapsed, 80px);
+  width: calc(100% - var(--sidebar-width-collapsed, 80px));
+  overflow-x: hidden;
+  padding: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* ✅ CRITICAL: Universal container width fixes - SIMPLIFIED */
+.dashboard-container,
+.settings-container,
+.payments-container,
+.exchange-container,
+.history-container,
+.marketplace-container,
+.analytics-dashboard {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* ✅ CRITICAL: Page-specific container fixes - SIMPLIFIED */
+.device-dashboard,
+.energy-exchange,
+.payments-page,
+.settings-page,
+.history-page {
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* ✅ CRITICAL: Sidebar width management */
+.side-navbar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-width-collapsed, 80px);
+  z-index: 1000;
+  overflow-x: hidden;
+}
+
+/* ✅ CRITICAL: Grid and flex container fixes - SIMPLIFIED */
+.kpi-overview,
+.stats-grid,
+.summary-stats,
+.charts-grid,
+.insights-grid,
+.devices-grid,
+.listings-grid,
+.marketplace-grid,
+.user-tokens-grid,
+.analytics-grid,
+.methods-grid {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: grid;
+  gap: 24px;
+}
+
+/* ✅ CRITICAL: Responsive grid adjustments - SIMPLIFIED */
+.kpi-overview {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.charts-grid {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.devices-grid,
+.listings-grid,
+.marketplace-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* ✅ CRITICAL: Auth form container fixes */
+.login-scroll-center-root,
+.register-scroll-center-root,
+.verify-email-scroll-center-root,
+.forgot-password-scroll-center-root,
+.reset-password-scroll-center-root {
+  width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  min-height: 100vh;
+  display: flex;
+  position: relative;
+}
+
+.login-scroll-center-left {
+  flex: 0 0 auto;
+  width: 420px;
+  max-width: 480px;
+  min-width: 320px;
+  padding-left: 5vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.login-scroll-center-right {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: auto;
+  overflow: hidden;
+}
+
+/* ✅ CRITICAL: Auth card fixes */
+.login-scroll-center-card,
+.register-scroll-center-card,
+.verify-email-scroll-center-card,
+.forgot-password-scroll-center-card,
+.reset-password-scroll-center-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 2rem auto;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ✅ CRITICAL: Table responsive fixes */
+.transaction-table,
+.history-table {
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.table-header,
+.table-row {
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+/* ✅ CRITICAL: Form and input fixes */
+.auth-form,
+.zk-trading-form,
+.form-group {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select,
+.form-input {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ✅ CRITICAL: Modal fixes */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 10000;
+}
+
+.modal-content {
+  width: 90vw;
+  max-width: 500px;
+  max-height: 90vh;
+  margin: 0 auto;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ✅ CRITICAL: Image and media fixes */
+img, video, iframe, canvas, svg {
+  max-width: 100%;
+  height: auto;
+  box-sizing: border-box;
+}
+
+/* ✅ CRITICAL: Circuit background fixes */
+.auth-circuit-bg {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ✅ CRITICAL: Prevent text overflow */
+.nav-label,
+.auth-subtitle,
+.card-content h3,
+.device-name {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* ✅ CRITICAL: Settings layout fix */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 32px;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* ✅ CRITICAL: Enhanced mobile responsiveness */
+@media (max-width: 1200px) {
+  .dashboard-container,
+  .settings-container,
+  .payments-container,
+  .exchange-container,
+  .history-container,
+  .marketplace-container,
+  .analytics-dashboard {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  
+  .kpi-overview,
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .charts-grid,
+  .devices-grid,
+  .listings-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .side-navbar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .side-navbar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .dashboard-container,
+  .settings-container,
+  .payments-container,
+  .exchange-container,
+  .history-container,
+  .marketplace-container,
+  .analytics-dashboard {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  .login-scroll-center-root,
+  .register-scroll-center-root,
+  .verify-email-scroll-center-root {
+    flex-direction: column;
+    padding: 0;
+  }
+  
+  .login-scroll-center-left {
+    width: 100vw;
+    padding: 0 16px;
+    justify-content: center;
+  }
+  
+  .login-scroll-center-right {
+    display: none;
+  }
+  
+  .login-scroll-center-card,
+  .register-scroll-center-card,
+  .verify-email-scroll-center-card {
+    width: calc(100vw - 32px);
+    margin: 1rem 0;
+  }
+  
+  .kpi-overview,
+  .stats-grid,
+  .charts-grid,
+  .devices-grid,
+  .listings-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-header,
+  .table-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container,
+  .settings-container,
+  .payments-container,
+  .exchange-container,
+  .history-container,
+  .marketplace-container,
+  .analytics-dashboard {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .login-scroll-center-card,
+  .register-scroll-center-card,
+  .verify-email-scroll-center-card {
+    width: calc(100vw - 24px);
+    padding: 1.5rem 1rem;
+  }
+}
+
+/* ✅ PREVENT CONTENT SHIFTING - FIXED VALUES */
+@media (min-width: 1400px) {
+  .dashboard-container,
+  .settings-container,
+  .payments-container,
+  .exchange-container,
+  .history-container,
+  .marketplace-container,
+  .analytics-dashboard {
+    max-width: 1400px;
+  }
+}
+
+/* Professional Icon Styling - UNCHANGED */
 .nav-icon,
 .btn-icon,
 .logo-icon,
@@ -88,7 +463,8 @@ body {
   font-style: normal;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* Clean Professional Icon Styling */
+
+/* Clean Professional Icon Styling - UNCHANGED */
 .nav-icon,
 .btn-icon,
 .logo-icon {
@@ -113,19 +489,19 @@ body {
   height: 28px;
 }
 
-/* Hover effects */
+/* Hover effects - UNCHANGED */
 .nav-item:hover .nav-icon,
 .top-option-btn:hover .btn-icon {
   color: rgba(255, 255, 255, 1) !important;
   transform: scale(1.05);
 }
 
-/* Active state */
+/* Active state - UNCHANGED */
 .nav-item.active .nav-icon {
   color: #60a5fa !important;
 }
 
-/* Button specific colors */
+/* Button specific colors - UNCHANGED */
 .sell-credits-btn .btn-icon {
   color: rgba(34, 197, 94, 0.9) !important;
 }
@@ -142,7 +518,7 @@ body {
   color: rgba(239, 68, 68, 0.9) !important;
 }
 
-/* Remove emoji styling */
+/* Remove emoji styling - UNCHANGED */
 .nav-icon,
 .btn-icon,
 .logo-icon {
@@ -151,8 +527,7 @@ body {
   font-size: inherit;
 }
 
-
-/* Enhanced hover effects */
+/* Enhanced hover effects - UNCHANGED */
 .nav-item:hover .nav-icon,
 .top-option-btn:hover .btn-icon,
 .auth-button:hover .auth-logo-icon {
@@ -171,7 +546,7 @@ body {
   transform: scale(1.05);
 }
 
-/* Active state icons */
+/* Active state icons - UNCHANGED */
 .nav-item.active .nav-icon {
   color: rgba(96, 165, 250, 0.9) !important;
   text-shadow: 
@@ -184,7 +559,7 @@ body {
     brightness(1.3);
 }
 
-/* Specific icon sizes and effects */
+/* Specific icon sizes and effects - UNCHANGED */
 .logo-icon {
   font-size: 28px;
   text-shadow: 
@@ -207,7 +582,7 @@ body {
     brightness(1.05);
 }
 
-/* Input icons */
+/* Input icons - UNCHANGED */
 .input-icon {
   font-size: 16px;
   color: rgba(255, 255, 255, 0.7) !important;
@@ -217,7 +592,7 @@ body {
   filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6));
 }
 
-/* Button icons */
+/* Button icons - UNCHANGED */
 .btn-icon {
   font-size: 16px;
   text-shadow: 
@@ -228,7 +603,7 @@ body {
     contrast(0.9);
 }
 
-/* Special effects for different button types */
+/* Special effects for different button types - UNCHANGED */
 .sell-credits-btn .btn-icon {
   text-shadow: 
     0 0 3px rgba(34, 197, 94, 0.8),
@@ -257,7 +632,7 @@ body {
     0 0 10px rgba(255, 255, 255, 0.4);
 }
 
-/* Error and success icons */
+/* Error and success icons - UNCHANGED */
 .error-icon {
   color: rgba(239, 68, 68, 0.9) !important;
   text-shadow: 
@@ -267,7 +642,7 @@ body {
   filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.8));
 }
 
-/* Circuit-themed icon glow */
+/* Circuit-themed icon glow - UNCHANGED */
 .circuit-icon {
   color: var(--circuit-primary) !important;
   text-shadow: 
@@ -297,7 +672,7 @@ body {
   }
 }
 
-/* Loading spinner icon */
+/* Loading spinner icon - UNCHANGED */
 .spinner-icon {
   color: rgba(255, 255, 255, 0.8) !important;
   text-shadow: 
@@ -307,7 +682,7 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* Password toggle icons */
+/* Password toggle icons - UNCHANGED */
 .password-toggle {
   color: rgba(255, 255, 255, 0.7) !important;
   text-shadow: 
@@ -325,7 +700,7 @@ body {
   filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
 }
 
-/* Close button icons */
+/* Close button icons - UNCHANGED */
 .close-btn {
   color: rgba(255, 255, 255, 0.7) !important;
   text-shadow: 
@@ -342,7 +717,7 @@ body {
   filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
 }
 
-/* Responsive icon adjustments */
+/* Responsive icon adjustments - UNCHANGED */
 @media (max-width: 768px) {
   .nav-icon {
     font-size: 16px;
@@ -360,7 +735,7 @@ body {
   }
 }
 
-/* High contrast mode adjustments */
+/* High contrast mode adjustments - UNCHANGED */
 @media (prefers-contrast: high) {
   .nav-icon,
   .btn-icon,
@@ -375,7 +750,7 @@ body {
   }
 }
 
-/* Reduced motion preferences */
+/* Reduced motion preferences - UNCHANGED */
 @media (prefers-reduced-motion: reduce) {
   .nav-icon,
   .btn-icon,
@@ -391,4 +766,3 @@ body {
     animation: none;
   }
 }
-
