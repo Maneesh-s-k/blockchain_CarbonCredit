@@ -2,7 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const EmailService = require('../utils/emailService');
+const emailService = require('../utils/emailService'); // ✅ CORRECT: Import instance directly
 const { OAuth2Client } = require('google-auth-library');
 const { validationResult } = require('express-validator');
 
@@ -96,8 +96,8 @@ exports.register = async (req, res) => {
 
     // Send OTP email
     try {
-      const emailService = new EmailService();
       console.log('📧 Attempting to send OTP email to:', email);
+      // ✅ FIXED: Use imported emailService instance directly (no 'new')
       await emailService.sendOTPEmail(user.email, user.username, otp);
       console.log('✅ OTP email sent successfully');
     } catch (emailError) {
@@ -246,12 +246,10 @@ exports.sendOTP = async (req, res) => {
     // ✅ ONLY update OTP fields, DON'T verify user
     user.verification.email.verificationOTP = otp;
     user.verification.email.verificationExpires = Date.now() + 600000; // 10 mins
-    // ❌ DON'T DO THIS: user.verification.email.isVerified = true;
-    // ❌ DON'T DO THIS: user.isEmailVerified = true;
     
     await user.save();
 
-    const emailService = new EmailService();
+    // ✅ FIXED: Use imported emailService instance directly (no 'new')
     await emailService.sendOTPEmail(user.email, user.username, otp);
     console.log('✅ OTP resent successfully');
 
@@ -403,7 +401,6 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// Forgot password
 // Forgot password with OTP
 exports.forgotPassword = async (req, res) => {
   try {
@@ -439,8 +436,7 @@ exports.forgotPassword = async (req, res) => {
       currentTime: Date.now()
     });
 
-    // Send email...
-    const emailService = new EmailService();
+    // ✅ FIXED: Use imported emailService instance directly (no 'new')
     await emailService.sendPasswordResetOTP(user.email, user.username, otp);
 
     res.json({
@@ -456,7 +452,6 @@ exports.forgotPassword = async (req, res) => {
     });
   }
 };
-
 
 // Verify password reset OTP
 exports.verifyPasswordResetOTP = async (req, res) => {
@@ -518,8 +513,6 @@ exports.verifyPasswordResetOTP = async (req, res) => {
   }
 };
 
-
-
 // Resend password reset OTP
 exports.resendPasswordResetOTP = async (req, res) => {
   try {
@@ -541,7 +534,7 @@ exports.resendPasswordResetOTP = async (req, res) => {
     user.security.passwordResetExpires = Date.now() + 600000; // 10 mins
     await user.save();
 
-    const emailService = new EmailService();
+    // ✅ FIXED: Use imported emailService instance directly (no 'new')
     await emailService.sendPasswordResetOTP(user.email, user.username, otp);
     console.log('✅ Password reset OTP resent successfully');
 
@@ -557,7 +550,6 @@ exports.resendPasswordResetOTP = async (req, res) => {
     });
   }
 };
-
 
 // Reset password
 exports.resetPassword = async (req, res) => {
@@ -651,8 +643,6 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
-
-
 
 // Change password
 exports.changePassword = async (req, res) => {
