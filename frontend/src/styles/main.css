@@ -907,3 +907,30 @@ img, video, iframe, canvas, svg {
     animation: none;
   }
 }
+
+
+
+/* Prevent flex/grid children from overflowing their parent */
+*,
+*:before,
+*:after {
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+.container,
+.dashboard-container,
+.main-content,
+.dashboard-main-layout,
+.kpi-overview,
+.charts-grid,
+.profile-container,
+.analytics-dashboard,
+.settings-container,
+.payments-container,
+.exchange-container,
+.history-container,
+.marketplace-container {
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
