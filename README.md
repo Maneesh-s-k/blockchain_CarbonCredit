@@ -1,5 +1,9 @@
-<img src="frontend/public/favicon.ico" width="32" height="32" alt="Logo" style="vertical-align: middle; margin-right: 8px;" />
-<span style="font-size:2em; vertical-align: middle;"><b>EnergyExchange: Blockchain-Based Carbon Credit Trading Platform</b></span>
+<table>
+  <tr>
+    <td><img src="frontend/public/favicon.ico" width="32" height="32" alt="Logo"></td>
+    <td><h1>EnergyExchange: Blockchain-Based Carbon Credit Trading Platform</h1></td>
+  </tr>
+</table>
 
 
 ## 🌍 Overview
