@@ -1,6 +1,6 @@
-# EnergyExchange: Blockchain-Based Carbon Credit Trading Platform
+<img src="frontend/public/favicon.ico" width="32" height="32" alt="Logo" style="vertical-align: middle; margin-right: 8px;" />
+<span style="font-size:2em; vertical-align: middle;"><b>EnergyExchange: Blockchain-Based Carbon Credit Trading Platform</b></span>
 
-[
 
 ## 🌍 Overview
 
@@ -13,15 +13,27 @@
 
 ## 🚀 Table of Contents
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Smart Contracts \& Blockchain](#smart-contracts--blockchain)
-- [Architecture](#architecture)
-- [Setup \& Installation](#setup--installation)
-- [Environment Variables](#environment-variables)
-- [Deployment](#deployment)
-- [Demo Links](#demo-links)
-- [License](#license)
+- [🌍 Overview](#-overview)
+- [🚀 Table of Contents](#-table-of-contents)
+- [✨ Features](#-features)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [⛓️ Smart Contracts \& Blockchain](#️-smart-contracts--blockchain)
+- [🏗️ Architecture](#️-architecture)
+- [🧑‍💻 Setup \& Installation](#-setup--installation)
+  - [**Prerequisites**](#prerequisites)
+  - [**Clone the Repository**](#clone-the-repository)
+  - [**Backend Setup**](#backend-setup)
+  - [**Frontend Setup**](#frontend-setup)
+- [⚙️ Environment Variables](#️-environment-variables)
+  - [**backend/.env**](#backendenv)
+  - [**frontend/.env**](#frontendenv)
+- [🧪 Testing \& Deployment](#-testing--deployment)
+- [📊 Data Visualization](#-data-visualization)
+- [🔒 Authentication \& Security](#-authentication--security)
+- [📄 License](#-license)
+- [📝 Notes](#-notes)
+- [👥 Contributors](#-contributors)
+- [🌐 Demo Links](#-demo-links)
 
 
 ## ✨ Features
