@@ -9,19 +9,6 @@
 - **Smart Contracts:** Deployed and verifiable on the Sepolia Ethereum Testnet
 
 
-## 🚀 Table of Contents
-
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Smart Contracts \& Blockchain](#smart-contracts--blockchain)
-- [Architecture](#architecture)
-- [Setup \& Installation](#setup--installation)
-- [Environment Variables](#environment-variables)
-- [Deployment](#deployment)
-- [Demo Links](#demo-links)
-- [License](#license)
-
-
 ## ✨ Features
 
 - **User Authentication:** JWT-based, Google OAuth 2.0, and secure password hashing (bcryptjs)
@@ -198,10 +185,6 @@ REACT_APP_BLOCK_EXPLORER=https://sepolia.etherscan.io
 - **Nodemailer:** Email verification \& OTP
 
 
-## 📄 License
-
-This project is open source under the [MIT License](LICENSE).
-
 ## 📝 Notes
 
 - **Contracts are deployed and verifiable on the Sepolia Ethereum Testnet.**
@@ -222,7 +205,6 @@ This project is open source under the [MIT License](LICENSE).
 - **Backend:** [https://energyexchange.onrender.com](https://energyexchange.onrender.com)
 - **Sepolia Etherscan:** [https://sepolia.etherscan.io](https://sepolia.etherscan.io)
 
-> For questions, issues, or contributions, please open an issue or contact the maintainer.
 
 **Enjoy using EnergyExchange!**
 Empowering a greener future through transparent, blockchain-based carbon markets.
