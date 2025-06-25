@@ -211,8 +211,9 @@ This project is open source under the [MIT License](LICENSE).
 
 ## 👥 Contributors
 
-- [Your Name](mailto:your.email@example.com)
-- [Other Contributors]
+- Maneesh S Kolekar
+- Kairav Kumar
+- Ojas Thete
 
 
 ## 🌐 Demo Links
