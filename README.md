@@ -1,4 +1,4 @@
-# EnergyExchange: Blockchain-Based Carbon Credit Trading Platform
+# energyExchange: Blockchain-Based Carbon Credit Trading Platform
 
 ## 🌍 Overview
 
